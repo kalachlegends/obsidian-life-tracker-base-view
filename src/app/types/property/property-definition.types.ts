@@ -155,7 +155,7 @@ export interface PropertyDefinition {
     /** Display name for UI */
     displayName: string
 
-    /** Script to execute when property is captured */
+    /** Script to execute when property is captured touch */
     script: string
     /** Property type */
     type: ObsidianPropertyType
