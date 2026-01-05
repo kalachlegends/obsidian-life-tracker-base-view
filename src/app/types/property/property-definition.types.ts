@@ -142,6 +142,9 @@ export interface PropertyDefinition {
     name: string
     /** Display name for UI */
     displayName: string
+
+    /** Script to execute when capture*/
+    script: string
     /** Property type */
     type: ObsidianPropertyType
     /** List of allowed values (empty array if not constrained) */

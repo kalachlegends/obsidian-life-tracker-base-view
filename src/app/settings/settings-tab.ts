@@ -404,6 +404,23 @@ export class LifeTrackerPluginSettingTab extends PluginSettingTab {
                 textarea.inputEl.rows = 2
             })
 
+        new Setting(optionsContainer)
+            .setName('Script')
+            .setDesc('Script to execute')
+            .addTextArea((textarea) => {
+                textarea
+                    .setPlaceholder('Optional description or help text')
+                    .setValue(definition.script)
+                    .onChange(async (value) => {
+                        await this.plugin.updateSettings((draft) => {
+                            const d = draft.propertyDefinitions.find((d) => d.id === definition.id)
+                            if (d) {
+                                d.script = value
+                            }
+                        })
+                    })
+                textarea.inputEl.rows = 2
+            })
         // Mappings (note filtering)
         this.renderMappings(optionsContainer, definition)
     }

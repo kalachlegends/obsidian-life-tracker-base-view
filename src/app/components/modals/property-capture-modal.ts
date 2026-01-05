@@ -633,6 +633,120 @@ export class PropertyCaptureModal extends Modal {
             this.filledProperties.delete(definition.name)
         }
 
+        if (definition.script && definition.script.trim()) {
+            try {
+                // Create a safe context for script execution
+                const context = {
+                    value: this.currentValue,
+                    file: file,
+                    app: this.plugin.app,
+                    Notice: Notice,
+                    plugin: this.plugin
+                }
+
+                // Create function with context and execute
+                const func = new Function(
+                    'context',
+                    `
+                    const { value, file, app, Notice, plugin } = context;
+                    ${definition.script}
+                `
+                )
+                const result = func(context)
+
+                if (result && typeof result === 'object' && !Array.isArray(result)) {
+                    // New object format: { propertyName: value, ... }
+                    const updates: Record<string, unknown> = {}
+
+                    for (const [propName, propValue] of Object.entries(result)) {
+                        // Update saved values
+                        this.savedValues[propName] = propValue
+                        updates[propName] = propValue
+
+                        // Update filled properties tracking
+                        const isFilled =
+                            propValue !== undefined && propValue !== null && propValue !== ''
+                        if (isFilled) {
+                            this.filledProperties.add(propName)
+                        } else {
+                            this.filledProperties.delete(propName)
+                        }
+                    }
+
+                    if (Object.keys(updates).length > 0) {
+                        // Write all updates to frontmatter
+                        void this.frontmatterService
+                            .write(file, updates)
+                            .then(() => {
+                                this.renderProgress()
+                            })
+                            .catch((error: unknown) => {
+                                console.error('Failed to save properties:', error)
+                            })
+                    }
+
+                    // If current property was updated, reflect the change
+                    if (definition.name in updates) {
+                        this.currentValue = updates[definition.name]
+                    }
+                    return
+                } else if (Array.isArray(result)) {
+                    // Legacy array format: [{ definition: string, value: unknown }, ...]
+                    const updates: Record<string, unknown> = {}
+                    for (const item of result) {
+                        if (
+                            item &&
+                            typeof item === 'object' &&
+                            'definition' in item &&
+                            'value' in item
+                        ) {
+                            const propName = item.definition
+                            const propValue = item.value
+
+                            // Update saved values
+                            this.savedValues[propName] = propValue
+                            updates[propName] = propValue
+
+                            // Update filled properties tracking
+                            const isFilled =
+                                propValue !== undefined && propValue !== null && propValue !== ''
+                            if (isFilled) {
+                                this.filledProperties.add(propName)
+                            } else {
+                                this.filledProperties.delete(propName)
+                            }
+                        }
+                    }
+
+                    if (Object.keys(updates).length > 0) {
+                        // Write all updates to frontmatter
+                        void this.frontmatterService
+                            .write(file, updates)
+                            .then(() => {
+                                this.renderProgress()
+                            })
+                            .catch((error: unknown) => {
+                                console.error('Failed to save properties:', error)
+                            })
+                    }
+
+                    // If current property was updated, reflect the change
+                    if (definition.name in updates) {
+                        this.currentValue = updates[definition.name]
+                    }
+                    return
+                } else if (result != null && result != '' && result != undefined) {
+                    // Handle single value return (backwards compatibility)
+                    this.currentValue = result
+                }
+            } catch (error) {
+                console.error('Error executing property script:', error)
+                new Notice(
+                    `Script error: ${error instanceof Error ? error.message : 'Unknown error'}`
+                )
+            }
+        }
+
         // Write to frontmatter (fire and forget, but log errors)
         void this.frontmatterService
             .write(file, { [definition.name]: this.currentValue })
