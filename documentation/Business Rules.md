@@ -41,6 +41,9 @@ Priority order for resolving an entry's date:
 - Only configured cards (with `data-property-id`) participate in maximize/minimize
 - Unconfigured cards are hidden when another card is maximized, but never receive maximize state
 - Escape key minimizes the currently maximized card
+- Overlay visualizations use their overlay ID as the data-property-id, allowing them to be maximized independently
+- Each overlay is treated as an independent visualization for maximize purposes
+- When overlays are maximized/minimized, they receive the maximize state but are not re-rendered (overlays use pre-aggregated chart data)
 
 ## Property Types in Visualizations
 
@@ -90,3 +93,11 @@ When the "Capture properties" command is invoked from a custom base view (Life T
 - Case-insensitive matching: "Running", "running", "RUNNING" are grouped together
 - Display labels use capitalized first letter (e.g., "Running" not "running")
 - Legends are always shown when multiple datasets exist (list data, overlays)
+
+## Reference Lines
+
+- Reference lines are only supported for cartesian chart types: LineChart, BarChart, AreaChart
+- Reference lines are disabled by default and must be explicitly enabled per property
+- For overlay charts, each property can have its own independent reference line
+- Reference line colors match the dataset color for visual consistency
+- Default label format is "Target: {value}" if no custom label is provided

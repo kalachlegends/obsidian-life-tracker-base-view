@@ -43,6 +43,7 @@ import {
     DATA_ATTR_FULL,
     getTimeFrameDateRange,
     isDateInTimeFrame,
+    extractPropertyName,
     type TimeFrameDateRange
 } from '../../utils'
 
@@ -155,6 +156,14 @@ export class LifeTrackerView extends BasesView implements FileProvider {
             () => this.gridEl,
             () => this.visualizations,
             (propertyId, propertyDisplayName) => {
+                // Check if this is an overlay (overlays use their ID as propertyId)
+                const overlayConfigs = this.columnConfigService.getOverlayConfigs()
+                if (overlayConfigs[propertyId as string]) {
+                    // Overlays don't use data points - they have pre-aggregated chart data
+                    // Return empty array to skip the update call
+                    return []
+                }
+
                 // Get data points (already filtered based on showEmptyValues setting)
                 const showEmptyValues = (this.config.get('showEmptyValues') as boolean) ?? false
                 return this.getDataPointsForProperty(
@@ -298,10 +307,18 @@ export class LifeTrackerView extends BasesView implements FileProvider {
             this.cacheService.setDateAnchors(dateAnchors)
         }
 
+        // Find property definition for value mapping support
+        // Extract property name from propertyId (strips namespace like "note." or "file.")
+        const propertyName = extractPropertyName(String(propertyId))
+        const propertyDefinition =
+            this.plugin.settings.propertyDefinitions.find((def) => def.name === propertyName) ??
+            null
+
         const dataPoints = this.aggregationService.createDataPoints(
             entries,
             propertyId,
             propertyDisplayName,
+            propertyDefinition,
             dateAnchors,
             showEmptyValues
         )
@@ -629,10 +646,17 @@ export class LifeTrackerView extends BasesView implements FileProvider {
 
         this.visualizations.forEach((viz) => {
             // Update each visualization with new data (already filtered based on showEmptyValues)
+            // Extract property name from propertyId (strips namespace like "note." or "file.")
+            const propertyName = extractPropertyName(String(viz.propertyId))
+            const propertyDefinition =
+                this.plugin.settings.propertyDefinitions.find((def) => def.name === propertyName) ??
+                null
+
             const dataPoints = this.aggregationService.createDataPoints(
                 filteredEntries,
                 viz.propertyId,
                 viz.propertyDisplayName,
+                propertyDefinition,
                 dateAnchors,
                 showEmptyValues
             )
@@ -674,10 +698,19 @@ export class LifeTrackerView extends BasesView implements FileProvider {
                 if (effectiveConfigs.length > 0) {
                     // Has configuration(s) (local overrides or global preset)
                     const showEmptyValues = (this.config.get('showEmptyValues') as boolean) ?? false
+
+                    // Extract property name from propertyId (strips namespace like "note." or "file.")
+                    const propertyName = extractPropertyName(String(propertyId))
+                    const propertyDefinition =
+                        this.plugin.settings.propertyDefinitions.find(
+                            (def) => def.name === propertyName
+                        ) ?? null
+
                     const dataPoints = this.aggregationService.createDataPoints(
                         entries,
                         propertyId,
                         displayName,
+                        propertyDefinition,
                         dateAnchors,
                         showEmptyValues
                     )
@@ -767,10 +800,18 @@ export class LifeTrackerView extends BasesView implements FileProvider {
 
             if (!dataPoints) {
                 // Create data points if not cached
+                // Extract property name from propertyId (strips namespace like "note." or "file.")
+                const propertyName = extractPropertyName(String(propertyId))
+                const propertyDefinition =
+                    this.plugin.settings.propertyDefinitions.find(
+                        (def) => def.name === propertyName
+                    ) ?? null
+
                 dataPoints = this.aggregationService.createDataPoints(
                     entries,
                     propertyId,
                     displayName,
+                    propertyDefinition,
                     dateAnchors,
                     showEmptyValues
                 )
@@ -801,7 +842,8 @@ export class LifeTrackerView extends BasesView implements FileProvider {
         const cardEl = this.gridEl.createDiv({
             cls: 'lt-card lt-card--overlay',
             attr: {
-                'data-overlay-id': overlayConfig.id
+                'data-overlay-id': overlayConfig.id,
+                [DATA_ATTR_FULL.PROPERTY_ID]: overlayConfig.id // Use overlay ID for maximize functionality
             }
         })
 
@@ -809,8 +851,9 @@ export class LifeTrackerView extends BasesView implements FileProvider {
         this.setupOverlayCardEventHandlers(cardEl, overlayConfig)
 
         // Create a ColumnVisualizationConfig for the overlay
+        // Use overlay ID as propertyId since overlays are independent visualizations
         const overlayColumnConfig: ColumnVisualizationConfig = {
-            propertyId: overlayConfig.propertyIds[0] ?? ('' as BasesPropertyId),
+            propertyId: overlayConfig.id as BasesPropertyId,
             id: overlayConfig.id,
             visualizationType: overlayConfig.visualizationType,
             displayName: overlayConfig.displayName,
@@ -829,14 +872,20 @@ export class LifeTrackerView extends BasesView implements FileProvider {
         // Enable legend for overlay charts (show property names)
         chartConfig.showLegend = true
 
-        // Create chart visualization
+        // Create chart visualization with overlay reference lines
         const visualization = new ChartVisualization(
             cardEl,
             this.plugin.app,
-            overlayConfig.propertyIds[0] ?? ('' as BasesPropertyId),
+            overlayConfig.id as BasesPropertyId,
             overlayConfig.displayName,
-            chartConfig
+            chartConfig,
+            overlayConfig.referenceLines
         )
+
+        // Wire up maximize callback (using overlay ID)
+        visualization.setMaximizeCallback((propertyId, maximize) => {
+            this.maximizeService.handleMaximizeToggle(propertyId, maximize)
+        })
 
         // Set animation duration from plugin settings
         visualization.setAnimationDuration(this.plugin.settings.animationDuration)
@@ -845,8 +894,9 @@ export class LifeTrackerView extends BasesView implements FileProvider {
         visualization.renderChartData(chartData)
 
         // Store in visualizations map using overlay ID
+        // Use overlay ID as propertyId for maximize functionality (overlays are independent visualizations)
         this.visualizations.set(overlayConfig.id, {
-            propertyId: overlayConfig.propertyIds[0] ?? ('' as BasesPropertyId),
+            propertyId: overlayConfig.id as BasesPropertyId,
             propertyDisplayName: overlayConfig.displayName,
             visualization
         })
@@ -1062,7 +1112,8 @@ export class LifeTrackerView extends BasesView implements FileProvider {
                 this.columnConfigService.updateOverlayConfig(overlayConfig.id, {
                     displayName: result.displayName,
                     visualizationType: result.visualizationType,
-                    propertyIds: result.propertyIds
+                    propertyIds: result.propertyIds,
+                    referenceLines: result.referenceLines
                 })
                 this.onDataUpdated()
             },
@@ -1218,6 +1269,7 @@ export class LifeTrackerView extends BasesView implements FileProvider {
             vizConfig.scale,
             vizConfig.colorScheme,
             heatmapConfig,
+            vizConfig.referenceLine,
             isFromPreset,
             isMaximized,
             canRemove,
@@ -1309,6 +1361,30 @@ export class LifeTrackerView extends BasesView implements FileProvider {
                         propertyId,
                         visualizationId,
                         { colorScheme: action.colorScheme }
+                    )
+                }
+                this.onDataUpdated()
+                break
+
+            case 'configureReferenceLine':
+                if (isFromPreset) {
+                    // Create local override from preset with new reference line
+                    const preset = this.columnConfigService.findMatchingPreset(propertyId)
+                    if (preset) {
+                        this.columnConfigService.saveColumnConfig(
+                            propertyId,
+                            preset.visualizationType,
+                            displayName,
+                            preset.scale,
+                            preset.colorScheme,
+                            action.referenceLine
+                        )
+                    }
+                } else {
+                    this.columnConfigService.updateVisualizationConfig(
+                        propertyId,
+                        visualizationId,
+                        { referenceLine: action.referenceLine }
                     )
                 }
                 this.onDataUpdated()
@@ -1533,13 +1609,20 @@ export class LifeTrackerView extends BasesView implements FileProvider {
                 break
 
             case 'property-definitions-changed':
+                // Clear cache and refresh - property definitions include value mappings
+                // which affect how data is aggregated for visualizations
+                this.cacheService.clearAll()
+                this.onDataUpdated()
+                break
+
             case 'confetti-setting-changed':
-                // These don't affect the visualization view, no refresh needed
+                // This doesn't affect the visualization view, no refresh needed
                 break
 
             case 'full':
             default:
-                // Full refresh for unknown changes
+                // Full refresh for unknown changes - clear cache to ensure fresh data
+                this.cacheService.clearAll()
                 this.onDataUpdated()
                 break
         }
