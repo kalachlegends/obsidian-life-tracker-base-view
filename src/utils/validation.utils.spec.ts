@@ -25,6 +25,7 @@ function createMockDefinition(overrides: Partial<PropertyDefinition> = {}): Prop
         id: 'test-id',
         name: 'test',
         displayName: 'Test',
+        script: '',
         type: 'text',
         allowedValues: [],
         numberRange: null,
@@ -33,6 +34,7 @@ function createMockDefinition(overrides: Partial<PropertyDefinition> = {}): Prop
         description: '',
         order: 0,
         mappings: [],
+        valueMapping: null,
         ...overrides
     }
 }

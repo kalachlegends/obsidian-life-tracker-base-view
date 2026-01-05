@@ -1,3 +1,27 @@
+## [2.6.0](https://github.com/dsebastien/obsidian-life-tracker-base-view/compare/2.5.0...2.6.0) (2026-01-05)
+
+### Features
+
+* **all:** added support for value mappings ([83c0434](https://github.com/dsebastien/obsidian-life-tracker-base-view/commit/83c0434fd50749080992b4a14dfe09da60d996fd)), closes [#75](https://github.com/dsebastien/obsidian-life-tracker-base-view/issues/75)
+## [2.5.0](https://github.com/dsebastien/obsidian-life-tracker-base-view/compare/2.4.0...2.5.0) (2026-01-03)
+
+### Features
+
+* **all:** added reference line support in visualization customizations ([faef43e](https://github.com/dsebastien/obsidian-life-tracker-base-view/commit/faef43e96523eeb1c0ddaaecd0862570f93bb252))
+* **all:** added support for reference lines on visualizations with multiple properties ([0a042e8](https://github.com/dsebastien/obsidian-life-tracker-base-view/commit/0a042e89a5d02a7c3a5c508f71a4ceeadcc5c8cc))
+
+### Bug Fixes
+
+* **all:** fixed issue with maximizing charts with multiple props ([5d4d2c2](https://github.com/dsebastien/obsidian-life-tracker-base-view/commit/5d4d2c271dc75ad49da267d195e6faa86f7d588c))
+## [2.4.0](https://github.com/dsebastien/obsidian-life-tracker-base-view/compare/2.3.0...2.4.0) (2026-01-03)
+
+### Features
+
+* **all:** add better support for lists. The values are now considered in isolation and aggregated correctly ([933f5b3](https://github.com/dsebastien/obsidian-life-tracker-base-view/commit/933f5b31c5fe1311ff74a8d81cb8a1931b8ef6d3))
+
+### Bug Fixes
+
+* **all:** fixed broken test ([bf3db4a](https://github.com/dsebastien/obsidian-life-tracker-base-view/commit/bf3db4ade3ec67171303afc1dc395550afbaae2a))
 ## [2.3.0](https://github.com/dsebastien/obsidian-life-tracker-base-view/compare/2.2.1...2.3.0) (2025-12-22)
 
 ### Features
