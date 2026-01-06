@@ -7,7 +7,7 @@ import { BasePropertyEditor } from './base-editor'
  * otherwise as a plain text input
  */
 export class TextEditor extends BasePropertyEditor {
-    private inputEl: HTMLInputElement | null = null
+    private inputEl: HTMLTextAreaElement | null = null
     private selectEl: HTMLSelectElement | null = null
 
     constructor(config: PropertyEditorConfig) {
@@ -94,7 +94,7 @@ export class TextEditor extends BasePropertyEditor {
     }
 
     private renderInput(container: HTMLElement): void {
-        this.inputEl = container.createEl('input', {
+        this.inputEl = container.createEl('textarea', {
             cls: this.config.compact
                 ? 'lt-editor-input lt-editor-input--compact'
                 : 'lt-editor-input',
