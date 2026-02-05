@@ -417,3 +417,55 @@ export function isDateInTimeFrame(date: Date, dateRange: TimeFrameDateRange | nu
     }
     return isWithinInterval(date, { start: dateRange.start, end: dateRange.end })
 }
+
+/**
+ * Create TickTick API date range for a single day
+ * Returns range from start to end of the day in TickTick API format
+ *
+ * @param date - Date object
+ * @returns DateRange object with from/to strings
+ */
+export function createTickTickDayRange(date: Date): { from: string; to: string } {
+    const dateStr = format(date, 'yyyy-MM-dd')
+    return {
+        from: `${dateStr} 00:00:00`,
+        to: `${dateStr} 23:59:59`
+    }
+}
+
+/**
+ * Create TickTick API date range for a week
+ * Returns range from Monday to Sunday
+ *
+ * @param date - Any date within the week
+ * @returns DateRange object with from/to strings
+ */
+export function createTickTickWeekRange(date: Date): { from: string; to: string } {
+    const monday = dateFnsStartOfWeek(date, { weekStartsOn: 1 })
+    const sunday = dateFnsEndOfWeek(date, { weekStartsOn: 1 })
+
+    return {
+        from: `${format(monday, 'yyyy-MM-dd')} 00:00:00`,
+        to: `${format(sunday, 'yyyy-MM-dd')} 23:59:59`
+    }
+}
+
+/**
+ * Get TickTick API date range from filename
+ * Automatically detects daily vs weekly notes
+ *
+ * @param filename - Filename without extension (e.g., "2026-02-05" or "2026-W06")
+ * @returns DateRange object or null if date cannot be parsed
+ */
+export function getTickTickDateRangeFromFilename(
+    filename: string
+): { from: string; to: string } | null {
+    const parsed = parseDateFromFilename(filename)
+    if (!parsed) return null
+
+    if (parsed.granularity === TimeGranularity.Weekly) {
+        return createTickTickWeekRange(parsed.date)
+    }
+
+    return createTickTickDayRange(parsed.date)
+}

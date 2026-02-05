@@ -46,7 +46,8 @@ test('TickTick Converter - basic task conversion', () => {
             startDate: null,
             dueDate: null,
             progress: 100,
-            deleted: 0
+            deleted: 0,
+            completedTime: null
         }
     ]
 
@@ -95,7 +96,8 @@ test('TickTick Converter - task with existing XP', () => {
             startDate: null,
             dueDate: null,
             progress: 100,
-            deleted: 0
+            deleted: 0,
+            completedTime: null
         }
     ]
 
@@ -144,7 +146,8 @@ test('TickTick Converter - uncompleted task', () => {
             startDate: null,
             dueDate: null,
             progress: 0,
-            deleted: 0
+            deleted: 0,
+            completedTime: null
         }
     ]
 
@@ -201,7 +204,8 @@ test('TickTick Converter - priority to XP mapping', () => {
                 startDate: null,
                 dueDate: null,
                 progress: 100,
-                deleted: 0
+                deleted: 0,
+                completedTime: null
             }
         ]
 

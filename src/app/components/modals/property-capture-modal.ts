@@ -636,28 +636,39 @@ export class PropertyCaptureModal extends Modal {
         if (definition.script && definition.script.trim()) {
             try {
                 // Handle TickTickInput command
-                //
-                new Notice(
-                    'this.plugin.settings.ticktick ' +
-                        definition.script.trim() +
-                        JSON.stringify(this.plugin.settings.ticktick)
-                )
                 if (definition.script.trim() === 'TickTickInput') {
-                    new Notice(
-                        'this.plugin.settings.ticktick ' +
-                            JSON.stringify(this.plugin.settings.ticktick)
-                    )
-                    if (this.plugin.settings.ticktick.enabled) {
-                        const tasksCompletedToday =
-                            await this.plugin.tickTickSyncService.getTasksCompletedToday()
-                        const totalXpToday = await this.plugin.tickTickSyncService.getTotalXpToday()
+                    // Use TickTick API to fetch and parse tasks based on filename date
+                    const { getTickTickDateRangeFromFilename } =
+                        await import('../../../utils/date.utils')
+                    const { TickTickAPIService } =
+                        await import('../../../integrations/ticktick/services/TickTickAPIService')
 
-                        const result = {
-                            tasks_completed_today: tasksCompletedToday,
-                            ticktick_xp_today: totalXpToday
+                    const dateRange = getTickTickDateRangeFromFilename(file.basename)
+
+                    if (!dateRange) {
+                        new Notice('⚠️ Could not parse date from filename for TickTick API')
+                        return
+                    }
+
+                    new Notice(`📅 Fetching TickTick data for ${file.basename}...`)
+
+                    try {
+                        // Get token from existing TickTick integration settings
+                        const token = this.plugin.settings.ticktick.token
+                        if (!token) {
+                            new Notice(
+                                '⚠️ TickTick token not configured. Please login in settings.'
+                            )
+                            return
                         }
 
-                        // Update saved values and frontmatter
+                        const apiService = new TickTickAPIService({
+                            token: token
+                        })
+
+                        const result = await apiService.parseTasksForDateRange(dateRange)
+
+                        // Update saved values and frontmatter with all parsed data
                         const updates: Record<string, unknown> = {}
                         for (const [propName, propValue] of Object.entries(result)) {
                             this.savedValues[propName] = propValue
@@ -677,14 +688,20 @@ export class PropertyCaptureModal extends Modal {
                         if (Object.keys(updates).length > 0) {
                             await this.frontmatterService.write(file, updates)
                             this.renderProgress()
+                            new Notice(
+                                `✅ TickTick data saved: ${result['task_count_done'] || 0} tasks, ${result['xp'] || 0} XP`
+                            )
                         }
 
                         // Update current value if needed
                         if (definition.name in updates) {
                             this.currentValue = updates[definition.name]
                         }
-                    } else {
-                        new Notice('⚠️ TickTick integration is not enabled')
+                    } catch (error) {
+                        console.error('TickTick API Error:', error)
+                        new Notice(
+                            `❌ TickTick API Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+                        )
                     }
                     return
                 }
