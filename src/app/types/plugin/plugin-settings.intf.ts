@@ -2,6 +2,8 @@ import type { VisualizationType } from '../visualization/visualization-type.intf
 import type { ScaleConfig, ReferenceLineConfig } from '../column/column-config.types'
 import type { PropertyDefinition } from '../property/property-definition.types'
 import type { ChartColorScheme } from '../../../utils/color.utils'
+import type { TickTickSettings } from './ticktick-settings.types'
+import { DEFAULT_TICKTICK_SETTINGS } from './ticktick-settings.types'
 
 /**
  * Global preset for a property name pattern
@@ -46,11 +48,18 @@ export interface PluginSettings {
      * Adds a fun celebration when all properties are saved
      */
     showConfettiOnCapture: boolean
+
+    /**
+     * TickTick integration settings
+     * Configure connection to TickTick for task synchronization
+     */
+    ticktick: TickTickSettings
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
     visualizationPresets: [],
     animationDuration: 3000,
     propertyDefinitions: [],
-    showConfettiOnCapture: true
+    showConfettiOnCapture: true,
+    ticktick: DEFAULT_TICKTICK_SETTINGS
 }

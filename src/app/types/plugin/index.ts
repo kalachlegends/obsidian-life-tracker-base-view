@@ -7,3 +7,5 @@ export { DEFAULT_BATCH_FILTER_MODE, BATCH_FILTER_MODE_OPTIONS } from './batch-fi
 export type { BatchFilterMode } from './batch-filter-mode.intf'
 export { getBatchFilterModeLabel } from './batch-filter-mode.intf'
 export type { CaptureContext } from './capture-context.intf'
+export type { TickTickSettings } from './ticktick-settings.types'
+export { DEFAULT_TICKTICK_SETTINGS } from './ticktick-settings.types'

@@ -84,7 +84,7 @@ export class PropertyCaptureModal extends Modal {
         if (this.saveDebounceTimer) {
             clearTimeout(this.saveDebounceTimer)
             // Perform immediate save of any pending changes
-            this.saveCurrentPropertyImmediate()
+            void void this.saveCurrentPropertyImmediate()
         }
         this.destroyEditor()
         this.contentEl.empty()
@@ -489,7 +489,7 @@ export class PropertyCaptureModal extends Modal {
             },
             onCommit: () => {
                 // Immediate save on blur
-                this.saveCurrentPropertyImmediate()
+                void this.saveCurrentPropertyImmediate()
             },
             onEnterKey: () => {
                 // Validate and navigate to next field (like pressing Next button)
@@ -606,14 +606,14 @@ export class PropertyCaptureModal extends Modal {
             clearTimeout(this.saveDebounceTimer)
         }
         this.saveDebounceTimer = setTimeout(() => {
-            this.saveCurrentPropertyImmediate()
+            void this.saveCurrentPropertyImmediate()
         }, AUTO_SAVE_DEBOUNCE_MS)
     }
 
     /**
      * Immediately save the current property value
      */
-    private saveCurrentPropertyImmediate(): void {
+    private async saveCurrentPropertyImmediate(): Promise<void> {
         const file = this.getCurrentFile()
         const definition = this.getCurrentDefinition()
         if (!file || !definition) return
@@ -635,6 +635,60 @@ export class PropertyCaptureModal extends Modal {
 
         if (definition.script && definition.script.trim()) {
             try {
+                // Handle TickTickInput command
+                //
+                new Notice(
+                    'this.plugin.settings.ticktick ' +
+                        definition.script.trim() +
+                        JSON.stringify(this.plugin.settings.ticktick)
+                )
+                if (definition.script.trim() === 'TickTickInput') {
+                    new Notice(
+                        'this.plugin.settings.ticktick ' +
+                            JSON.stringify(this.plugin.settings.ticktick)
+                    )
+                    if (this.plugin.settings.ticktick.enabled) {
+                        const tasksCompletedToday =
+                            await this.plugin.tickTickSyncService.getTasksCompletedToday()
+                        const totalXpToday = await this.plugin.tickTickSyncService.getTotalXpToday()
+
+                        const result = {
+                            tasks_completed_today: tasksCompletedToday,
+                            ticktick_xp_today: totalXpToday
+                        }
+
+                        // Update saved values and frontmatter
+                        const updates: Record<string, unknown> = {}
+                        for (const [propName, propValue] of Object.entries(result)) {
+                            this.savedValues[propName] = propValue
+                            updates[propName] = propValue
+
+                            const isFilled =
+                                propValue !== undefined &&
+                                propValue !== null &&
+                                String(propValue) !== ''
+                            if (isFilled) {
+                                this.filledProperties.add(propName)
+                            } else {
+                                this.filledProperties.delete(propName)
+                            }
+                        }
+
+                        if (Object.keys(updates).length > 0) {
+                            await this.frontmatterService.write(file, updates)
+                            this.renderProgress()
+                        }
+
+                        // Update current value if needed
+                        if (definition.name in updates) {
+                            this.currentValue = updates[definition.name]
+                        }
+                    } else {
+                        new Notice('⚠️ TickTick integration is not enabled')
+                    }
+                    return
+                }
+
                 // Create a safe context for script execution
                 const context = {
                     value: this.currentValue,
@@ -665,7 +719,10 @@ export class PropertyCaptureModal extends Modal {
 
                         // Update filled properties tracking
                         const isFilled =
-                            propValue !== undefined && propValue !== null && propValue !== ''
+                            propValue !== undefined &&
+                            propValue !== null &&
+                            propValue !== '' &&
+                            propValue !== 0
                         if (isFilled) {
                             this.filledProperties.add(propName)
                         } else {
@@ -735,7 +792,7 @@ export class PropertyCaptureModal extends Modal {
                         this.currentValue = updates[definition.name]
                     }
                     return
-                } else if (result != null && result != '' && result != undefined) {
+                } else if (result !== null && result !== '' && result !== undefined) {
                     // Handle single value return (backwards compatibility)
                     this.currentValue = result
                 }
@@ -764,7 +821,7 @@ export class PropertyCaptureModal extends Modal {
         // Ensure any pending save completes
         if (this.saveDebounceTimer) {
             clearTimeout(this.saveDebounceTimer)
-            this.saveCurrentPropertyImmediate()
+            void this.saveCurrentPropertyImmediate()
         }
 
         // Store current value before navigating
@@ -786,7 +843,7 @@ export class PropertyCaptureModal extends Modal {
         // Ensure any pending save completes
         if (this.saveDebounceTimer) {
             clearTimeout(this.saveDebounceTimer)
-            this.saveCurrentPropertyImmediate()
+            void this.saveCurrentPropertyImmediate()
         }
 
         // Store current value before navigating
@@ -871,7 +928,7 @@ export class PropertyCaptureModal extends Modal {
         if (this.saveDebounceTimer) {
             clearTimeout(this.saveDebounceTimer)
         }
-        this.saveCurrentPropertyImmediate()
+        void this.saveCurrentPropertyImmediate()
 
         // Navigate based on position
         if (this.isLastProperty()) {
@@ -903,7 +960,7 @@ export class PropertyCaptureModal extends Modal {
         // Save current property
         if (this.saveDebounceTimer) {
             clearTimeout(this.saveDebounceTimer)
-            this.saveCurrentPropertyImmediate()
+            void this.saveCurrentPropertyImmediate()
         }
 
         // Start from previous file (wrap around)
@@ -937,7 +994,7 @@ export class PropertyCaptureModal extends Modal {
         // Save current property
         if (this.saveDebounceTimer) {
             clearTimeout(this.saveDebounceTimer)
-            this.saveCurrentPropertyImmediate()
+            void this.saveCurrentPropertyImmediate()
         }
 
         // Start from next file (wrap around)
@@ -971,7 +1028,7 @@ export class PropertyCaptureModal extends Modal {
         // Save current property
         if (this.saveDebounceTimer) {
             clearTimeout(this.saveDebounceTimer)
-            this.saveCurrentPropertyImmediate()
+            void this.saveCurrentPropertyImmediate()
         }
 
         // Show mini confetti for file completion
@@ -1027,7 +1084,7 @@ export class PropertyCaptureModal extends Modal {
         // Ensure any pending save completes
         if (this.saveDebounceTimer) {
             clearTimeout(this.saveDebounceTimer)
-            this.saveCurrentPropertyImmediate()
+            void this.saveCurrentPropertyImmediate()
         }
 
         // Show confetti if enabled

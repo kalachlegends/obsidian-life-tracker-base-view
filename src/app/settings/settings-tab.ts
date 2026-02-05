@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting } from 'obsidian'
+import { App, Notice, PluginSettingTab, Setting } from 'obsidian'
 import type { LifeTrackerPlugin } from '../plugin'
 import { FolderSuggest } from '../components/ui/folder-suggest'
 import { CSS_CLASS, CSS_SELECTOR, type ChartColorScheme } from '../../utils'
@@ -31,7 +31,7 @@ const COLOR_SCHEME_OPTIONS: Record<string, string> = {
     red: 'Red'
 }
 
-type SettingsTab = 'properties' | 'visualizations' | 'about'
+type SettingsTab = 'properties' | 'visualizations' | 'integrations' | 'about'
 
 export class LifeTrackerPluginSettingTab extends PluginSettingTab {
     plugin: LifeTrackerPlugin
@@ -65,6 +65,9 @@ export class LifeTrackerPluginSettingTab extends PluginSettingTab {
             case 'visualizations':
                 this.renderVisualizationsTab(contentEl)
                 break
+            case 'integrations':
+                this.renderIntegrationsTab(contentEl)
+                break
             case 'about':
                 this.renderAboutTab(contentEl)
                 break
@@ -77,6 +80,7 @@ export class LifeTrackerPluginSettingTab extends PluginSettingTab {
         const tabs: Array<{ id: SettingsTab; label: string }> = [
             { id: 'properties', label: 'Property definitions' },
             { id: 'visualizations', label: 'Visualizations' },
+            { id: 'integrations', label: 'Integrations' },
             { id: 'about', label: 'About' }
         ]
 
@@ -1194,6 +1198,195 @@ export class LifeTrackerPluginSettingTab extends PluginSettingTab {
             },
             { type: 'preset-deleted', presetId: id }
         )
+    }
+
+    // ========================================
+    // Integrations Tab
+    // ========================================
+
+    private renderIntegrationsTab(containerEl: HTMLElement): void {
+        // TickTick Section
+        new Setting(containerEl).setName('TickTick').setHeading()
+
+        const tickTickDesc = new DocumentFragment()
+        tickTickDesc.createDiv({
+            text: 'Connect to TickTick to import task completion data for productivity analysis.'
+        })
+        tickTickDesc.createEl('div', {
+            text: '⚠️ Your credentials will be sent to api.ticktick.com',
+            cls: 'lt-warning-text'
+        })
+        new Setting(containerEl).setDesc(tickTickDesc)
+
+        // Enable/Disable Toggle
+        new Setting(containerEl)
+            .setName('Enable TickTick integration')
+            .setDesc('Connect to TickTick for task data synchronization')
+            .addToggle((toggle) => {
+                toggle.setValue(this.plugin.settings.ticktick.enabled).onChange(async (value) => {
+                    await this.plugin.updateSettings((draft) => {
+                        draft.ticktick.enabled = value
+                    })
+                    this.display()
+                })
+            })
+
+        if (this.plugin.settings.ticktick.enabled) {
+            // Username
+            new Setting(containerEl)
+                .setName('Username')
+                .setDesc('Your TickTick email')
+                .addText((text) => {
+                    text.setPlaceholder('your@email.com')
+                        .setValue(this.plugin.settings.ticktick.username)
+                        .onChange(async (value) => {
+                            await this.plugin.updateSettings((draft) => {
+                                draft.ticktick.username = value
+                            })
+                        })
+                })
+
+            // Password
+            new Setting(containerEl)
+                .setName('Password')
+                .setDesc('Your TickTick password')
+                .addText((text) => {
+                    text.setPlaceholder('Enter password')
+                        .setValue(this.plugin.settings.ticktick.password)
+                        .onChange(async (value) => {
+                            await this.plugin.updateSettings((draft) => {
+                                draft.ticktick.password = value
+                            })
+                        })
+                    text.inputEl.type = 'password'
+                })
+
+            // Sync Mode
+            new Setting(containerEl)
+                .setName('Sync mode')
+                .setDesc('How to trigger TickTick synchronization')
+                .addDropdown((dropdown) => {
+                    dropdown
+                        .addOption('manual', 'Manual only')
+                        .addOption('auto', 'Auto sync on startup')
+                        .addOption('script_trigger', 'Via script (TickTickInput, TickTickSync)')
+                        .setValue(this.plugin.settings.ticktick.syncMode)
+                        .onChange(async (value) => {
+                            await this.plugin.updateSettings((draft) => {
+                                draft.ticktick.syncMode = value as
+                                    | 'manual'
+                                    | 'auto'
+                                    | 'script_trigger'
+                            })
+                            this.display()
+                        })
+                })
+
+            // Test Connection Button
+            new Setting(containerEl)
+                .setName('Connection')
+                .setDesc('Test your TickTick connection')
+                .addButton((button) => {
+                    button
+                        .setButtonText('Test Connection')
+                        .setIcon('refresh-cw')
+                        .onClick(async () => {
+                            try {
+                                button.setDisabled(true)
+                                button.setButtonText('Testing...')
+                                button.buttonEl.style.color = ''
+
+                                // Validate credentials
+                                const username = this.plugin.settings.ticktick.username
+                                const password = this.plugin.settings.ticktick.password
+
+                                if (!username || !password) {
+                                    new Notice(
+                                        '❌ TickTick: Please enter both username and password'
+                                    )
+                                    return
+                                }
+
+                                // Test connection
+                                new Notice('🔍 Testing TickTick connection...')
+
+                                const loginSuccess = await this.plugin.tickTickAuthService.login({
+                                    username,
+                                    password
+                                })
+
+                                if (loginSuccess) {
+                                    // Save the token and inboxId
+                                    const authData = this.plugin.tickTickAuthService.getAuthData()
+                                    await this.plugin.updateSettings((draft) => {
+                                        draft.ticktick.token = authData.token
+                                        draft.ticktick.inboxId = authData.inboxId
+                                    })
+                                    button.buttonEl.style.color = 'var(--text-success)'
+                                    new Notice('✅ TickTick: Successfully connected!')
+                                } else {
+                                    button.buttonEl.style.color = 'var(--text-error)'
+                                    new Notice(
+                                        '❌ TickTick: Invalid credentials or connection failed'
+                                    )
+                                }
+                            } catch (error) {
+                                console.error('TickTick connection test failed:', error)
+
+                                // Provide specific error messages based on error type
+                                let errorMessage = '❌ TickTick: Connection failed'
+
+                                if (error instanceof Error) {
+                                    if (error.message.includes('network')) {
+                                        errorMessage =
+                                            '❌ TickTick: Network error - check your internet connection'
+                                    } else if (error.message.includes('timeout')) {
+                                        errorMessage =
+                                            '❌ TickTick: Connection timeout - please try again'
+                                    } else if (error.message.includes('401')) {
+                                        errorMessage = '❌ TickTick: Invalid credentials'
+                                    } else if (error.message.includes('403')) {
+                                        errorMessage =
+                                            '❌ TickTick: Access denied - check your account'
+                                    } else {
+                                        errorMessage = `❌ TickTick: ${error.message}`
+                                    }
+                                }
+
+                                new Notice(errorMessage)
+                                button.buttonEl.style.color = 'var(--text-error)'
+                            } finally {
+                                // Always restore button state
+                                button.setDisabled(false)
+                                button.setButtonText('Test Connection')
+                            }
+                        })
+                })
+
+            // Script Commands Documentation
+            containerEl.createEl('hr', { cls: 'lt-settings-separator' })
+            new Setting(containerEl).setName('Script Commands').setHeading()
+
+            const commandsDesc = new DocumentFragment()
+            commandsDesc.createDiv({
+                text: 'Use these commands in Property Definition Script field:',
+                cls: 'lt-script-commands-desc'
+            })
+
+            const commandsList = commandsDesc.createEl('ul', { cls: 'lt-script-commands-list' })
+            commandsList.createEl('li', {
+                text: 'TickTickInput - Returns task counts and XP metrics'
+            })
+            commandsList.createEl('li', {
+                text: 'TickTickSync - Syncs tasks and returns data in manual format'
+            })
+            commandsList.createEl('li', {
+                text: "ticktick:today - Gets today's completed tasks count"
+            })
+            commandsList.createEl('li', { text: "ticktick:week - Gets this week's stats" })
+
+            new Setting(containerEl).setDesc(commandsDesc)
+        }
     }
 
     // ========================================

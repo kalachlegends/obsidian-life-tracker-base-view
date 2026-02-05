@@ -16,6 +16,10 @@ import { getLifeTrackerViewOptions } from './view/view-options'
 import { GridView, GRID_VIEW_TYPE } from './view/grid-view/grid-view'
 import { getGridViewOptions } from './view/grid-view/grid-view-options'
 import { registerCommands } from './commands'
+import { TickTickAPI } from '../integrations/ticktick/api/TickTickAPI'
+import { TickTickAuthService } from '../integrations/ticktick/services/TickTickAuthService'
+import { TickTickSyncService } from '../integrations/ticktick/services/TickTickSyncService'
+import { TickTickToManualConverter } from '../integrations/ticktick/services/TickTickToManualConverter'
 
 export class LifeTrackerPlugin extends Plugin {
     /**
@@ -32,6 +36,26 @@ export class LifeTrackerPlugin extends Plugin {
      * Currently active file provider (base view that can provide files for batch capture)
      */
     private activeFileProvider: FileProvider | null = null
+
+    /**
+     * TickTick API client
+     */
+    tickTickAPI!: TickTickAPI
+
+    /**
+     * TickTick authentication service
+     */
+    tickTickAuthService!: TickTickAuthService
+
+    /**
+     * TickTick synchronization service
+     */
+    tickTickSyncService!: TickTickSyncService
+
+    /**
+     * TickTick to manual format converter
+     */
+    tickTickConverter!: TickTickToManualConverter
 
     /**
      * Register a file provider as active (called when view becomes visible)
@@ -62,6 +86,9 @@ export class LifeTrackerPlugin extends Plugin {
     override async onload() {
         log('Initializing', 'debug')
         await this.loadSettings()
+
+        // Initialize TickTick services
+        this.initializeTickTickServices()
 
         // Register the Life Tracker Base View
         const registered = this.registerBasesView(LIFE_TRACKER_VIEW_TYPE, {
@@ -100,6 +127,33 @@ export class LifeTrackerPlugin extends Plugin {
     override onunload() {}
 
     /**
+     * Initialize TickTick integration services
+     */
+    private initializeTickTickServices(): void {
+        // Create API client with stored token if available
+        const token = this.settings.ticktick.token || ''
+        const inboxId = this.settings.ticktick.inboxId || ''
+        this.tickTickAPI = new TickTickAPI(token)
+        if (inboxId) {
+            this.tickTickAPI.setInboxId(inboxId)
+        }
+
+        // Create authentication service
+        this.tickTickAuthService = new TickTickAuthService(this.tickTickAPI)
+        if (token && inboxId) {
+            this.tickTickAuthService.restoreSession(token, inboxId)
+        }
+
+        // Create converter with project mapping
+        this.tickTickConverter = new TickTickToManualConverter(
+            this.settings.ticktick.projectMapping
+        )
+
+        // Create sync service
+        this.tickTickSyncService = new TickTickSyncService(this.tickTickAPI, this.tickTickConverter)
+    }
+
+    /**
      * Load the plugin settings
      */
     async loadSettings() {
@@ -131,6 +185,14 @@ export class LifeTrackerPlugin extends Plugin {
             // Load confetti setting
             if (typeof loadedSettings.showConfettiOnCapture === 'boolean') {
                 draft.showConfettiOnCapture = loadedSettings.showConfettiOnCapture
+            }
+
+            // Load TickTick settings
+            if (loadedSettings.ticktick) {
+                draft.ticktick = {
+                    ...draft.ticktick,
+                    ...loadedSettings.ticktick
+                }
             }
         })
 
