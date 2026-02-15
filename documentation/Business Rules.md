@@ -101,3 +101,10 @@ When the "Capture properties" command is invoked from a custom base view (Life T
 - For overlay charts, each property can have its own independent reference line
 - Reference line colors match the dataset color for visual consistency
 - Default label format is "Target: {value}" if no custom label is provided
+
+## TickTick Credential Security
+
+- The TickTick password MUST NEVER be persisted to disk (plugin settings / `data.json`). It is held in memory only during the settings session and used solely to obtain an auth token.
+- After a successful login, the password field in settings is explicitly cleared to empty string.
+- On plugin load, any previously stored password is cleared from settings as a migration safeguard.
+- Only the auth token and inboxId are persisted for session restoration.

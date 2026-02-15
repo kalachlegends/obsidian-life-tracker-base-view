@@ -1232,6 +1232,9 @@ export class LifeTrackerPluginSettingTab extends PluginSettingTab {
             })
 
         if (this.plugin.settings.ticktick.enabled) {
+            // Transient password storage — never persisted to disk
+            let tickTickPassword = ''
+
             // Username
             new Setting(containerEl)
                 .setName('Username')
@@ -1246,18 +1249,14 @@ export class LifeTrackerPluginSettingTab extends PluginSettingTab {
                         })
                 })
 
-            // Password
+            // Password — kept in memory only, never saved to settings
             new Setting(containerEl)
                 .setName('Password')
-                .setDesc('Your TickTick password')
+                .setDesc('Enter password to connect. It is not saved to disk.')
                 .addText((text) => {
-                    text.setPlaceholder('Enter password')
-                        .setValue(this.plugin.settings.ticktick.password)
-                        .onChange(async (value) => {
-                            await this.plugin.updateSettings((draft) => {
-                                draft.ticktick.password = value
-                            })
-                        })
+                    text.setPlaceholder('Enter password').onChange((value) => {
+                        tickTickPassword = value
+                    })
                     text.inputEl.type = 'password'
                 })
 
@@ -1298,9 +1297,8 @@ export class LifeTrackerPluginSettingTab extends PluginSettingTab {
 
                                 // Validate credentials
                                 const username = this.plugin.settings.ticktick.username
-                                const password = this.plugin.settings.ticktick.password
 
-                                if (!username || !password) {
+                                if (!username || !tickTickPassword) {
                                     new Notice(
                                         '❌ TickTick: Please enter both username and password'
                                     )
@@ -1312,15 +1310,16 @@ export class LifeTrackerPluginSettingTab extends PluginSettingTab {
 
                                 const loginSuccess = await this.plugin.tickTickAuthService.login({
                                     username,
-                                    password
+                                    password: tickTickPassword
                                 })
 
                                 if (loginSuccess) {
-                                    // Save the token and inboxId
+                                    // Save the token and inboxId, clear password from settings
                                     const authData = this.plugin.tickTickAuthService.getAuthData()
                                     await this.plugin.updateSettings((draft) => {
                                         draft.ticktick.token = authData.token
                                         draft.ticktick.inboxId = authData.inboxId
+                                        draft.ticktick.password = ''
                                     })
                                     button.buttonEl.style.color = 'var(--text-success)'
                                     new Notice('✅ TickTick: Successfully connected!')

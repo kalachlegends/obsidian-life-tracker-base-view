@@ -193,6 +193,8 @@ export class LifeTrackerPlugin extends Plugin {
                     ...draft.ticktick,
                     ...loadedSettings.ticktick
                 }
+                // Never persist password — clear any previously stored value
+                draft.ticktick.password = ''
             }
         })
 
