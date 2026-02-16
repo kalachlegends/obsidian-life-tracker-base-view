@@ -66,7 +66,7 @@ export class TickTickAPIService {
 
     /**
      * Get completed tasks within a date range
-     * Uses the /project/all/completed endpoint
+     * Uses the /project/all/completed/ endpoint
      */
     async getCompletedTasks(dateRange: DateRange): Promise<ITask[]> {
         const params = new URLSearchParams({
@@ -76,10 +76,12 @@ export class TickTickAPIService {
         })
         const url = `${this.apiUrl}/project/all/completed/?${params.toString()}`
 
+        console.debug(`[TickTick] Fetching completed tasks: ${url}`)
         const response = await this.makeRequest(url, 'GET')
 
         // The response should be an array of tasks
         if (Array.isArray(response)) {
+            console.debug(`[TickTick] Got ${response.length} completed tasks`)
             return response as ITask[]
         }
 
@@ -87,50 +89,126 @@ export class TickTickAPIService {
         if (response && typeof response === 'object') {
             const tasks = (response as Record<string, unknown>)['tasks']
             if (Array.isArray(tasks)) {
+                console.debug(`[TickTick] Got ${tasks.length} completed tasks (wrapped)`)
                 return tasks as ITask[]
             }
         }
 
+        console.debug('[TickTick] No completed tasks found')
         return []
+    }
+
+    /**
+     * Get uncompleted tasks via the SYNC endpoint
+     * TickTick has no dedicated "uncompleted" endpoint;
+     * uncompleted tasks come from /batch/check/0 (syncTaskBean.update + syncTaskBean.add)
+     * and are filtered by status === 0 (active/uncompleted)
+     */
+    async getUncompletedTasks(): Promise<ITask[]> {
+        const url = `${this.apiUrl}/batch/check/0`
+
+        console.debug(`[TickTick] Fetching uncompleted tasks via SYNC: ${url}`)
+        const response = await this.makeRequest(url, 'GET')
+
+        const tasks: ITask[] = []
+
+        if (response && typeof response === 'object') {
+            const syncData = response as Record<string, unknown>
+            if (syncData['syncTaskBean'] && typeof syncData['syncTaskBean'] === 'object') {
+                const taskBean = syncData['syncTaskBean'] as Record<string, unknown>
+
+                // Collect from 'update' array (existing tasks)
+                const updateTasks = taskBean['update']
+                if (Array.isArray(updateTasks)) {
+                    tasks.push(...(updateTasks as ITask[]))
+                }
+
+                // Collect from 'add' array (newly added tasks)
+                const addTasks = taskBean['add']
+                if (Array.isArray(addTasks)) {
+                    tasks.push(...(addTasks as ITask[]))
+                }
+            }
+        }
+
+        // Filter to only uncompleted tasks (status 0 = normal/active)
+        const uncompleted = tasks.filter((task) => task.status === 0)
+        console.debug(
+            `[TickTick] SYNC returned ${tasks.length} total tasks, ${uncompleted.length} uncompleted`
+        )
+        return uncompleted
     }
 
     /**
      * Get all tasks (including uncompleted)
      * Uses sync endpoint to get current state of all tasks
      */
-    async getAllTasks(checkpoint?: number): Promise<ITask[]> {
-        const cp = checkpoint ?? 0
-        const url = `${this.apiUrl}/batch/check/0?cnt=${cp}`
+    async getAllTasks(): Promise<ITask[]> {
+        const url = `${this.apiUrl}/batch/check/0`
 
         const response = await this.makeRequest(url, 'GET')
 
-        // Handle sync response format
+        const tasks: ITask[] = []
+
         if (response && typeof response === 'object') {
             const syncData = response as Record<string, unknown>
             if (syncData['syncTaskBean'] && typeof syncData['syncTaskBean'] === 'object') {
                 const taskBean = syncData['syncTaskBean'] as Record<string, unknown>
-                const tasks = taskBean['update']
-                if (Array.isArray(tasks)) {
-                    return tasks as ITask[]
+
+                const updateTasks = taskBean['update']
+                if (Array.isArray(updateTasks)) {
+                    tasks.push(...(updateTasks as ITask[]))
+                }
+
+                const addTasks = taskBean['add']
+                if (Array.isArray(addTasks)) {
+                    tasks.push(...(addTasks as ITask[]))
                 }
             }
         }
 
-        return []
+        return tasks
     }
 
     /**
      * Get tasks for a specific date range
-     * Combines completed and uncompleted tasks
+     * Combines completed tasks (from /project/all/closed) and uncompleted tasks (from SYNC)
+     * If one endpoint fails, still returns results from the other
      */
     async getTasksForDateRange(dateRange: DateRange): Promise<ITask[]> {
-        // Get completed tasks for the date range
-        const completedTasks = await this.getCompletedTasks(dateRange)
+        // Fetch completed and uncompleted tasks in parallel, with individual error handling
+        const [completedResult, uncompletedResult] = await Promise.allSettled([
+            this.getCompletedTasks(dateRange),
+            this.getUncompletedTasks()
+        ])
 
-        // Get all tasks to find uncompleted ones
+        const completedTasks = completedResult.status === 'fulfilled' ? completedResult.value : []
+        const uncompletedTasks =
+            uncompletedResult.status === 'fulfilled' ? uncompletedResult.value : []
 
-        // Combine completed and uncompleted tasks
-        return [...completedTasks]
+        if (completedResult.status === 'rejected') {
+            console.error('[TickTick] Failed to fetch completed tasks:', completedResult.reason)
+        }
+        if (uncompletedResult.status === 'rejected') {
+            console.error('[TickTick] Failed to fetch uncompleted tasks:', uncompletedResult.reason)
+        }
+
+        console.debug(
+            `[TickTick] Combined: ${completedTasks.length} completed + ${uncompletedTasks.length} uncompleted`
+        )
+
+        // Deduplicate by task id in case any task appears in both responses
+        const taskMap = new Map<string, ITask>()
+        for (const task of completedTasks) {
+            taskMap.set(task.id, task)
+        }
+        for (const task of uncompletedTasks) {
+            if (!taskMap.has(task.id)) {
+                taskMap.set(task.id, task)
+            }
+        }
+
+        return [...taskMap.values()]
     }
 
     /**

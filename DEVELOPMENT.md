@@ -31,7 +31,7 @@ Set the `OBSIDIAN_VAULT_LOCATION` environment variable to your vault path. The b
 
 ```powershell
 # Set temporarily for current session
-
+$env:OBSIDIAN_VAULT_LOCATION="C:\Users\YourName\Documents\ObsidianVault"
 
 # Set permanently for your user
 [System.Environment]::SetEnvironmentVariable('OBSIDIAN_VAULT_LOCATION', 'C:\Users\YourName\Documents\ObsidianVault', 'User')

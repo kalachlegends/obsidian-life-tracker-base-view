@@ -109,17 +109,78 @@ export class TickTickAPI {
         )
     }
 
-    async getAllTasks(): Promise<ITask[]> {
-        const url = `${this.apiUrl}/${ENDPOINTS.tasks.replace('{checkpoint}', this.checkpoint.toString())}`
+    /**
+     * Get uncompleted tasks via the SYNC endpoint
+     * Fetches all tasks from /batch/check/0 and filters to status === 0 (active/uncompleted)
+     */
+    async getUncompletedTasks(): Promise<ITask[]> {
+        const url = `${this.apiUrl}/${ENDPOINTS.sync}`
         const response = await this.makeRequest(url, 'GET')
-        console.log(response)
 
-        const syncResponse = response as ISyncResponse
-        if (syncResponse && syncResponse.syncTaskBean) {
-            this.checkpoint = syncResponse.checkPoint
-            return syncResponse.syncTaskBean.update || []
+        const tasks: ITask[] = []
+        const syncResponse = response as ISyncResponse & {
+            syncTaskBean: ISyncTaskBean & { add?: ITask[] }
         }
+
+        if (syncResponse?.syncTaskBean) {
+            if (syncResponse.syncTaskBean.update) {
+                tasks.push(...syncResponse.syncTaskBean.update)
+            }
+            if (syncResponse.syncTaskBean.add) {
+                tasks.push(...syncResponse.syncTaskBean.add)
+            }
+        }
+
+        return tasks.filter((task) => task.status === 0)
+    }
+
+    /**
+     * Get completed tasks via the /project/all/closed endpoint
+     */
+    async getCompletedTasks(from: string, to: string, limit: number = 1000): Promise<ITask[]> {
+        const params = new URLSearchParams({
+            from,
+            to,
+            status: 'Completed',
+            limit: limit.toString()
+        })
+        const url = `${this.apiUrl}/${ENDPOINTS.projectAllClosed}?${params.toString()}`
+        const response = await this.makeRequest(url, 'GET')
+
+        if (Array.isArray(response)) {
+            return response as ITask[]
+        }
+
+        if (response && typeof response === 'object') {
+            const tasks = (response as Record<string, unknown>)['tasks']
+            if (Array.isArray(tasks)) {
+                return tasks as ITask[]
+            }
+        }
+
         return []
+    }
+
+    async getAllTasks(): Promise<ITask[]> {
+        const url = `${this.apiUrl}/${ENDPOINTS.sync}`
+        const response = await this.makeRequest(url, 'GET')
+
+        const tasks: ITask[] = []
+        const syncResponse = response as ISyncResponse & {
+            syncTaskBean: ISyncTaskBean & { add?: ITask[] }
+        }
+
+        if (syncResponse?.syncTaskBean) {
+            this.checkpoint = syncResponse.checkPoint
+            if (syncResponse.syncTaskBean.update) {
+                tasks.push(...syncResponse.syncTaskBean.update)
+            }
+            if (syncResponse.syncTaskBean.add) {
+                tasks.push(...syncResponse.syncTaskBean.add)
+            }
+        }
+
+        return tasks
     }
 
     async getTask(taskId: string, projectId?: string): Promise<ITask | null> {
@@ -152,6 +213,7 @@ export class TickTickAPI {
             status: taskData.status || 0,
             items: taskData.items || [],
             progress: taskData.progress || 0,
+            completedTime: taskData.completedTime || null,
             modifiedTime: new Date().toISOString().replace('Z', '+0000'),
             deleted: 0,
             tags: taskData.tags || [],
