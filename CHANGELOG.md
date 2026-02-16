@@ -1,4 +1,16 @@
-## 1.2.2 (2026-01-05)
+## [1.2.3](https://github.com/dsebastien/obsidian-life-tracker-base-view/compare/1.2.2...1.2.3) (2026-02-16)
+
+### Features
+
+* ticktick integration fix ([f69e666](https://github.com/dsebastien/obsidian-life-tracker-base-view/commit/f69e66636b91e9ddd249a4cf00818b966a9e2af3))
+* ticktick integration make ([1019772](https://github.com/dsebastien/obsidian-life-tracker-base-view/commit/1019772c9af4ba2c20baee537e41657ac6b458cf))
+
+### Bug Fixes
+
+* fix ([1d4f6c3](https://github.com/dsebastien/obsidian-life-tracker-base-view/commit/1d4f6c309c5c0c5be401cd01c783d452bbaa077e))
+* no use credentials ([90f345b](https://github.com/dsebastien/obsidian-life-tracker-base-view/commit/90f345b65f93e9423ff65502d4fded223cc4222c))
+* textarea ([11c6233](https://github.com/dsebastien/obsidian-life-tracker-base-view/commit/11c623344a9e3dce39c74609cc0377c1c5db4300))
+## [1.2.2](https://github.com/dsebastien/obsidian-life-tracker-base-view/compare/1e4cacab4c98354c4e36114638c3e4463f8ae651...1.2.2) (2026-01-05)
 
 ### Features
 
