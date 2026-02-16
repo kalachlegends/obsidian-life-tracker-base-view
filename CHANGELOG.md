@@ -1,3 +1,4 @@
+## [1.2.5](https://github.com/dsebastien/obsidian-life-tracker-base-view/compare/1.2.3...1.2.5) (2026-02-16)
 ## [1.2.3](https://github.com/dsebastien/obsidian-life-tracker-base-view/compare/1.2.2...1.2.3) (2026-02-16)
 
 ### Features
