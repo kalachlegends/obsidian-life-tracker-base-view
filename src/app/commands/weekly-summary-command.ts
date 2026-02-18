@@ -1,15 +1,15 @@
-import { getAllTags, Notice, type TFile } from 'obsidian'
+import { Notice } from 'obsidian'
 import type { LifeTrackerPlugin } from '../plugin'
-import { FrontmatterService } from '../services/frontmatter.service'
-import { parseDateFromFilename, startOfWeek, formatDateISO } from '../../utils/date.utils'
+import { formatDateISO } from '../../utils/date.utils'
 import {
     endOfWeek as dateFnsEndOfWeek,
     startOfWeek as dateFnsStartOfWeek,
-    subWeeks,
-    isWithinInterval
+    subWeeks
 } from 'date-fns'
+import { startOfWeek } from '../../utils/date.utils'
 import { AIAnalysisModal } from '../components/modals/ai-analysis-modal'
 import { log } from '../../utils'
+import { collectNotesForDateRange, buildSummaryMessage } from './summary-utils'
 
 /** Default system prompt for weekly summary */
 const DEFAULT_WEEKLY_SUMMARY_PROMPT = `You are a personal life tracking analyst. The user is reviewing their weekly data. Analyze the data provided and create a comprehensive but concise weekly summary.
@@ -23,15 +23,6 @@ Guidelines:
 - Provide 2-3 actionable suggestions for the coming week
 - Be supportive and constructive
 - Format your response in markdown with clear sections`
-
-/**
- * Data collected for a single note in the weekly summary
- */
-interface NoteData {
-    filename: string
-    date: Date
-    values: Record<string, unknown>
-}
 
 /**
  * Register the weekly summary command
@@ -86,112 +77,13 @@ async function executeWeeklySummary(plugin: LifeTrackerPlugin): Promise<void> {
 
     new Notice(`Collecting data for ${startStr} to ${endStr}...`)
 
-    // Collect data
-    const frontmatterService = new FrontmatterService(plugin.app)
-    const filterTag = plugin.settings.ai.weeklySummary.filterTag.trim()
-
-    log(`[WeeklySummary] Filter tag: "${filterTag || '(none)'}"`, 'debug')
-
-    // Get all markdown files
-    const allFiles = plugin.app.vault.getMarkdownFiles()
-
-    log(`[WeeklySummary] Total markdown files in vault: ${allFiles.length}`, 'debug')
-
-    // Frontmatter keys to exclude (Obsidian internals)
-    const EXCLUDED_KEYS = new Set(['position', 'cssclasses', 'cssclass'])
-
-    // Filter and collect data — reads ALL frontmatter, not just defined properties
-    const noteDataList: NoteData[] = []
-
-    // Debug counters
-    let skippedByTag = 0
-    let skippedByDateParse = 0
-    let skippedByDateRange = 0
-    let skippedByNoValues = 0
-
-    for (const file of allFiles) {
-        // Filter by tag if configured
-        if (filterTag && !fileHasTag(plugin, file, filterTag)) {
-            if (skippedByTag < 3) {
-                const cache = plugin.app.metadataCache.getFileCache(file)
-                const fileTags = cache ? getAllTags(cache) : null
-                log(
-                    `[WeeklySummary] Tag filter skipped "${file.basename}": file tags=${JSON.stringify(fileTags)}, looking for="${filterTag}"`,
-                    'debug'
-                )
-            }
-            skippedByTag++
-            continue
-        }
-
-        // Parse date from filename
-        const parsed = parseDateFromFilename(file.basename)
-        if (!parsed) {
-            skippedByDateParse++
-            continue
-        }
-
-        // Filter by date range
-        if (
-            !isWithinInterval(parsed.date, {
-                start: dateRange.start,
-                end: dateRange.end
-            })
-        ) {
-            skippedByDateRange++
-            continue
-        }
-
-        log(
-            `[WeeklySummary] Processing file: ${file.basename} (date: ${formatDateISO(parsed.date)})`,
-            'debug'
-        )
-
-        // Read ALL frontmatter values
-        const frontmatter = frontmatterService.read(file)
-
-        log(
-            `[WeeklySummary]   Frontmatter keys: ${Object.keys(frontmatter).join(', ') || '(empty)'}`,
-            'debug'
-        )
-
-        // Collect all non-internal frontmatter values
-        const values: Record<string, unknown> = {}
-
-        for (const [key, value] of Object.entries(frontmatter)) {
-            // Skip Obsidian internal keys
-            if (EXCLUDED_KEYS.has(key)) continue
-            // Skip null/undefined
-            if (value === null || value === undefined) continue
-
-            values[key] = value
-            log(`[WeeklySummary]   ${key} = ${JSON.stringify(value)}`, 'debug')
-        }
-
-        if (Object.keys(values).length > 0) {
-            noteDataList.push({
-                filename: file.basename,
-                date: parsed.date,
-                values
-            })
-        } else {
-            skippedByNoValues++
-            log(`[WeeklySummary]   SKIPPED: empty frontmatter for ${file.basename}`, 'debug')
-        }
-    }
-
-    // Log summary of filtering
-    log(
-        `[WeeklySummary] Filtering summary: ${allFiles.length} total -> ${noteDataList.length} with data`,
-        'debug'
+    // Collect data using shared utility
+    const noteDataList = collectNotesForDateRange(
+        plugin,
+        dateRange,
+        plugin.settings.ai.weeklySummary.filterTag,
+        'weekly'
     )
-    log(`[WeeklySummary]   Skipped by tag filter: ${skippedByTag}`, 'debug')
-    log(`[WeeklySummary]   Skipped by date parse: ${skippedByDateParse}`, 'debug')
-    log(`[WeeklySummary]   Skipped by date range: ${skippedByDateRange}`, 'debug')
-    log(`[WeeklySummary]   Skipped by empty frontmatter: ${skippedByNoValues}`, 'debug')
-
-    // Sort by date
-    noteDataList.sort((a, b) => a.date.getTime() - b.date.getTime())
 
     if (noteDataList.length === 0) {
         log(
@@ -204,11 +96,12 @@ async function executeWeeklySummary(plugin: LifeTrackerPlugin): Promise<void> {
         return
     }
 
-    // Build the message for AI
-    const userMessage = buildWeeklySummaryMessage(
+    // Build the message for AI using shared utility
+    const userMessage = buildSummaryMessage(
         noteDataList,
         dateRange,
-        plugin.settings.ai.weeklySummary.includeCsvData
+        plugin.settings.ai.weeklySummary.includeCsvData,
+        'Weekly'
     )
 
     log(`[WeeklySummary] Built AI message (${userMessage.length} chars)`, 'debug')
@@ -279,157 +172,4 @@ function getWeeklySummaryDateRange(plugin: LifeTrackerPlugin): { start: Date; en
         'debug'
     )
     return range
-}
-
-/**
- * Check if a file has a specific tag (searches frontmatter tags AND inline tags).
- * Uses Obsidian's getAllTags() which returns normalized tags with '#' prefix.
- */
-function fileHasTag(plugin: LifeTrackerPlugin, file: TFile, tag: string): boolean {
-    const cache = plugin.app.metadataCache.getFileCache(file)
-    if (!cache) return false
-
-    // getAllTags returns all tags (frontmatter + inline) normalized with '#' prefix
-    const allTags = getAllTags(cache)
-    if (!allTags || allTags.length === 0) return false
-
-    const normalizedTag = '#' + tag.toLowerCase().replace(/^#/, '')
-
-    return allTags.some((t) => t.toLowerCase() === normalizedTag)
-}
-
-/**
- * Build the user message for the weekly summary AI prompt
- */
-function buildWeeklySummaryMessage(
-    noteDataList: NoteData[],
-    dateRange: { start: Date; end: Date },
-    includeCsv: boolean
-): string {
-    const lines: string[] = []
-
-    lines.push(
-        `## Weekly data: ${formatDateISO(dateRange.start)} to ${formatDateISO(dateRange.end)}`
-    )
-    lines.push(`Total notes: ${noteDataList.length}`)
-    lines.push('')
-
-    // Compute averages for numeric properties
-    const numericAverages = computeNumericAverages(noteDataList)
-
-    if (Object.keys(numericAverages).length > 0) {
-        lines.push('### Averages')
-        for (const [prop, avg] of Object.entries(numericAverages)) {
-            lines.push(
-                `- ${prop}: ${avg.toFixed(2)} (from ${countNonNull(noteDataList, prop)} entries)`
-            )
-        }
-        lines.push('')
-    }
-
-    // Per-day breakdown
-    lines.push('### Daily values')
-    for (const note of noteDataList) {
-        lines.push(`**${note.filename}**`)
-        for (const [key, value] of Object.entries(note.values)) {
-            const displayValue =
-                value === undefined || value === null
-                    ? '(not set)'
-                    : Array.isArray(value)
-                      ? value.join(', ')
-                      : String(value)
-            lines.push(`  - ${key}: ${displayValue}`)
-        }
-    }
-
-    // CSV data
-    if (includeCsv) {
-        lines.push('')
-        lines.push('### CSV data')
-        const csvData = buildCsvData(noteDataList)
-        lines.push('```csv')
-        lines.push(csvData)
-        lines.push('```')
-    }
-
-    return lines.join('\n')
-}
-
-/**
- * Compute averages for all numeric properties across notes
- */
-function computeNumericAverages(noteDataList: NoteData[]): Record<string, number> {
-    const sums: Record<string, number> = {}
-    const counts: Record<string, number> = {}
-
-    for (const note of noteDataList) {
-        for (const [key, value] of Object.entries(note.values)) {
-            if (value === undefined || value === null) continue
-
-            const numValue = typeof value === 'number' ? value : parseFloat(String(value))
-
-            if (!isNaN(numValue)) {
-                sums[key] = (sums[key] ?? 0) + numValue
-                counts[key] = (counts[key] ?? 0) + 1
-            } else if (typeof value === 'boolean') {
-                sums[key] = (sums[key] ?? 0) + (value ? 1 : 0)
-                counts[key] = (counts[key] ?? 0) + 1
-            }
-        }
-    }
-
-    const averages: Record<string, number> = {}
-    for (const [key, sum] of Object.entries(sums)) {
-        const count = counts[key]
-        if (count && count > 0) {
-            averages[key] = sum / count
-        }
-    }
-
-    return averages
-}
-
-/**
- * Count non-null entries for a property
- */
-function countNonNull(noteDataList: NoteData[], prop: string): number {
-    return noteDataList.filter((n) => {
-        const v = n.values[prop]
-        return v !== undefined && v !== null
-    }).length
-}
-
-/**
- * Build CSV data from the collected notes
- */
-function buildCsvData(noteDataList: NoteData[]): string {
-    if (noteDataList.length === 0) return ''
-
-    // Collect all property names
-    const allProps = new Set<string>()
-    for (const note of noteDataList) {
-        for (const key of Object.keys(note.values)) {
-            allProps.add(key)
-        }
-    }
-
-    const propList = Array.from(allProps).sort()
-
-    // Header
-    const header = ['date', ...propList].join(',')
-
-    // Rows
-    const rows = noteDataList.map((note) => {
-        const dateStr = formatDateISO(note.date)
-        const values = propList.map((prop) => {
-            const value = note.values[prop]
-            if (value === undefined || value === null) return ''
-            if (typeof value === 'string' && value.includes(',')) return `"${value}"`
-            if (Array.isArray(value)) return `"${value.join('; ')}"`
-            return String(value)
-        })
-        return [dateStr, ...values].join(',')
-    })
-
-    return [header, ...rows].join('\n')
 }

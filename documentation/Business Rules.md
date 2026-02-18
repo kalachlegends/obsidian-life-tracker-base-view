@@ -115,11 +115,16 @@ When the "Capture properties" command is invoked from a custom base view (Life T
 - Supported providers: OpenAI (direct API) and OpenRouter (multi-model gateway). Both use the OpenAI-compatible chat completions API.
 - API keys are persisted in plugin settings (user responsibility to secure vault).
 - "Analyze after capture" sends all captured field values from the current note to the AI for brief insights. This fires on capture completion (handleDone), not on each field save.
+- The "Generate daily summary" command scans vault files for a single day (today or yesterday), filters by tag, computes numeric averages, builds CSV data, and sends everything to the AI. Configured independently (tag, date range, prompt).
 - The "Generate weekly summary" command scans vault files, filters by tag and date range, computes numeric averages, builds CSV data, and sends everything to the AI.
+- The "Generate monthly summary" command works identically to weekly but uses calendar month boundaries (1st to last day). Configured independently (tag, date range, prompt).
+- All summary reports (daily, weekly, monthly) include a dedicated "Undone tasks" section that highlights `tasks_undone`, `sprint_tasks_undone`, `habits_undone`, and their counts when present in note frontmatter.
 - Custom system prompts override defaults; empty prompt fields fall back to built-in defaults.
 - All AI network calls use Obsidian's `requestUrl` API for CORS-safe requests.
+- The daily summary date range defaults to "today". Users can change to "yesterday" in settings.
 - The weekly summary date range defaults to "this week" (Monday-Sunday, ISO week). Users can change to "last week" in settings.
-- Weekly summary tag filter is case-insensitive, matches frontmatter tags without `#` prefix.
+- The monthly summary date range defaults to "this month" (1st to last day). Users can change to "last month" in settings.
+- Weekly and monthly summary tag filters are case-insensitive, match frontmatter tags without `#` prefix.
 - If AI is disabled or unconfigured, capture completes normally without AI analysis.
 
 ## HCGateway Credentials
@@ -139,6 +144,14 @@ When the "Capture properties" command is invoked from a custom base view (Life T
 - Fetched values are aggregated per data type (sum for steps/distance/calories, average for heart rate/temperature, latest for weight/height, duration for sleep) and written as frontmatter properties.
 - Property names follow the pattern `{prefix}_{snake_case_type}` (e.g., `health_heart_rate`, `health_steps`).
 - Every error (login, fetch, write) is shown to the user via Notice.
+
+## AI Report Saving
+
+- The AI analysis modal includes a "Save to note" button that creates a markdown note in the "Life Tracker Reports" folder.
+- The folder is auto-created if it does not exist.
+- File naming format: `YYYY-MM-DD - {sanitized title}.md`. Re-running for the same period overwrites the existing file.
+- The saved note includes a metadata header with generation date, provider, and model info.
+- Auto-save to note is enabled by default. When enabled, reports are automatically saved to a note after AI generation (in addition to showing the modal). This can be toggled in Settings → Life Tracker → Integrations → Report saving.
 
 ## Thoughts Capture
 

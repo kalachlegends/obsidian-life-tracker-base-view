@@ -563,14 +563,10 @@ export function postProcessResult(result: TickTickParserResult): Record<string, 
     // Merge summary and projects
     processedResult['summary'] = [...result.summary, ...result.projects]
 
-    // Delete keys that shouldn't be in final output
-    const keysToDelete = [
-        'date_parsed',
-        'habits_by_category',
-        'sprint_tasks',
-        'projects',
-        'summary'
-    ]
+    // Delete internal keys that shouldn't be in final frontmatter output.
+    // Note: sprint_tasks_done, sprint_tasks_undone, tasks_undone, habits_undone
+    // are intentionally kept so all undone data is available in reports.
+    const keysToDelete = ['date_parsed', 'habits_by_category', 'projects', 'summary']
 
     for (const key of keysToDelete) {
         delete processedResult[key]

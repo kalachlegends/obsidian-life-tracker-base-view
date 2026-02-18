@@ -113,10 +113,14 @@ export {
     getBatchFilterModeLabel,
     DEFAULT_AI_SETTINGS,
     DEFAULT_AI_PROVIDER_CONFIG,
+    DEFAULT_DAILY_SUMMARY_SETTINGS,
     DEFAULT_WEEKLY_SUMMARY_SETTINGS,
+    DEFAULT_MONTHLY_SUMMARY_SETTINGS,
     AI_PROVIDER_LABELS,
     AI_MODELS,
-    WEEKLY_SUMMARY_DATE_RANGE_LABELS
+    DAILY_SUMMARY_DATE_RANGE_LABELS,
+    WEEKLY_SUMMARY_DATE_RANGE_LABELS,
+    MONTHLY_SUMMARY_DATE_RANGE_LABELS
 } from './plugin'
 export type {
     PluginSettings,
@@ -129,8 +133,12 @@ export type {
     AIProviderType,
     AIProviderConfig,
     AISettings,
+    DailySummarySettings,
+    DailySummaryDateRange,
     WeeklySummarySettings,
     WeeklySummaryDateRange,
+    MonthlySummarySettings,
+    MonthlySummaryDateRange,
     AIAnalysisResult
 } from './plugin'
 

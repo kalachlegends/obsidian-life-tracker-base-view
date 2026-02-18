@@ -2180,11 +2180,12 @@
 }
 
 .lt-carousel-modal .modal-content {
-    @apply p-0 overflow-hidden;
+    @apply p-0 overflow-y-auto;
+    max-height: min(80vh, calc(100vh - 80px));
 }
 
 .lt-carousel-container {
-    @apply flex flex-col p-8 overflow-hidden;
+    @apply flex flex-col p-8;
 }
 
 /* File navigation (batch mode) */
@@ -3216,7 +3217,8 @@
 }
 
 .lt-property-selection-modal .modal-content {
-    @apply p-6 overflow-hidden;
+    @apply p-6 overflow-y-auto;
+    max-height: min(80vh, calc(100vh - 80px));
 }
 
 .lt-property-selection-title {
@@ -3758,14 +3760,14 @@
    ======================================== */
 
 .lt-ai-analysis-modal {
-    @apply p-0 overflow-hidden;
-    max-width: min(600px, calc(100vw - 32px));
-    min-width: min(480px, calc(100vw - 32px));
+    overflow-visible: true;
+    max-width: min(800px, calc(100vw - 32px));
+    min-width: min(600px, calc(100vw - 32px));
 }
 
 .lt-ai-analysis-modal .modal-content {
     @apply p-6 overflow-hidden flex flex-col;
-    max-height: min(600px, calc(100vh - 120px));
+    max-height: min(80vh, calc(100vh - 80px));
 }
 
 .lt-ai-analysis-title {
@@ -3790,10 +3792,16 @@
     border: 1px solid var(--background-modifier-border);
 }
 
-.lt-ai-analysis-content {
-    @apply flex-1 overflow-y-auto mb-4 p-4 rounded-lg;
+.lt-ai-analysis-scroll-wrapper {
+    @apply flex-1 overflow-y-auto mb-4 rounded-lg;
+    min-height: 0;
     background-color: var(--background-secondary);
     border: 1px solid var(--background-modifier-border);
+}
+
+.lt-ai-analysis-content {
+    overflow-visible: true;
+    @apply p-4;
 }
 
 .lt-ai-analysis-content p {
@@ -3875,7 +3883,7 @@
     }
 
     .lt-ai-analysis-modal .modal-content {
-        @apply p-4 max-h-full;
+        @apply p-4 max-h-full overflow-hidden flex flex-col;
     }
 
     .lt-ai-analysis-title {
@@ -3886,8 +3894,12 @@
         @apply flex-wrap gap-2 mb-3;
     }
 
+    .lt-ai-analysis-scroll-wrapper {
+        @apply mb-3;
+    }
+
     .lt-ai-analysis-content {
-        @apply p-3 mb-3;
+        @apply p-3;
     }
 
     .lt-ai-analysis-actions {
