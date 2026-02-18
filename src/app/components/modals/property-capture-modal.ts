@@ -1184,24 +1184,28 @@ export class PropertyCaptureModal extends Modal {
         const file = this.getCurrentFile()
         if (!file) return
 
-        // Build a data summary from saved values
+        // Read ALL frontmatter from the file, not just defined properties
+        const frontmatter = this.frontmatterService.read(file)
+
+        // Obsidian internal keys to exclude
+        const excludedKeys = new Set(['position', 'cssclasses', 'cssclass'])
+
         const dataLines: string[] = []
         dataLines.push(`Note: ${file.basename}`)
         dataLines.push('')
 
-        for (const def of this.sortedDefinitions) {
-            const value = this.savedValues[def.name]
-            const displayName = def.displayName || def.name
+        for (const [key, value] of Object.entries(frontmatter)) {
+            if (excludedKeys.has(key)) continue
+            if (value === null || value === undefined) continue
+
             const valueStr =
-                value === undefined || value === null || value === ''
-                    ? '(not set)'
-                    : Array.isArray(value)
-                      ? value.join(', ')
-                      : String(value)
-            dataLines.push(`- ${displayName}: ${valueStr}`)
+                value === '' ? '(not set)' : Array.isArray(value) ? value.join(', ') : String(value)
+            dataLines.push(`- ${key}: ${valueStr}`)
         }
 
         const userMessage = dataLines.join('\n')
+
+        log(`[Capture] AI analysis data:\n${userMessage}`, 'debug')
 
         // Use custom prompt or default
         const systemPrompt =
@@ -1210,6 +1214,11 @@ export class PropertyCaptureModal extends Modal {
         new Notice('Analyzing captured data with AI...')
 
         const result = await this.plugin.aiService.analyze(systemPrompt, userMessage)
+
+        log(
+            `[Capture] AI result: success=${String(result.success)}, length=${result.content.length}`,
+            'debug'
+        )
 
         // Show result in modal
         new AIAnalysisModal(this.plugin, result, `Analysis: ${file.basename}`).open()

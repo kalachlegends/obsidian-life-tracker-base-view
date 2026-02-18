@@ -1,8 +1,6 @@
 import { Notice, type TFile } from 'obsidian'
 import type { LifeTrackerPlugin } from '../plugin'
-import type { PropertyDefinition } from '../types'
 import { FrontmatterService } from '../services/frontmatter.service'
-import { PropertyRecognitionService } from '../services/property-recognition.service'
 import { parseDateFromFilename, startOfWeek, formatDateISO } from '../../utils/date.utils'
 import {
     endOfWeek as dateFnsEndOfWeek,
@@ -90,37 +88,25 @@ async function executeWeeklySummary(plugin: LifeTrackerPlugin): Promise<void> {
 
     // Collect data
     const frontmatterService = new FrontmatterService(plugin.app)
-    const recognitionService = new PropertyRecognitionService(plugin.app)
-    const allDefinitions = plugin.settings.propertyDefinitions
-
-    log(
-        `[WeeklySummary] Total property definitions: ${allDefinitions.length}`,
-        'debug',
-        allDefinitions.map((d) => `${d.name} (${d.type})`)
-    )
-
-    // Get the property names to include
-    const includeProperties = plugin.settings.ai.weeklySummary.includeProperties
     const filterTag = plugin.settings.ai.weeklySummary.filterTag.trim()
 
-    log(
-        `[WeeklySummary] Filter tag: "${filterTag || '(none)'}", include properties: ${includeProperties.length > 0 ? JSON.stringify(includeProperties) : '(auto: number/checkbox/text)'}`,
-        'debug'
-    )
+    log(`[WeeklySummary] Filter tag: "${filterTag || '(none)'}"`, 'debug')
 
     // Get all markdown files
     const allFiles = plugin.app.vault.getMarkdownFiles()
 
     log(`[WeeklySummary] Total markdown files in vault: ${allFiles.length}`, 'debug')
 
-    // Filter and collect data
+    // Frontmatter keys to exclude (Obsidian internals)
+    const EXCLUDED_KEYS = new Set(['position', 'cssclasses', 'cssclass'])
+
+    // Filter and collect data — reads ALL frontmatter, not just defined properties
     const noteDataList: NoteData[] = []
 
     // Debug counters
     let skippedByTag = 0
     let skippedByDateParse = 0
     let skippedByDateRange = 0
-    let skippedByNoProperties = 0
     let skippedByNoValues = 0
 
     for (const file of allFiles) {
@@ -138,7 +124,12 @@ async function executeWeeklySummary(plugin: LifeTrackerPlugin): Promise<void> {
         }
 
         // Filter by date range
-        if (!isWithinInterval(parsed.date, { start: dateRange.start, end: dateRange.end })) {
+        if (
+            !isWithinInterval(parsed.date, {
+                start: dateRange.start,
+                end: dateRange.end
+            })
+        ) {
             skippedByDateRange++
             continue
         }
@@ -148,18 +139,7 @@ async function executeWeeklySummary(plugin: LifeTrackerPlugin): Promise<void> {
             'debug'
         )
 
-        // Get applicable properties for this file
-        const applicableDefinitions = recognitionService.getApplicableProperties(
-            file,
-            allDefinitions
-        )
-
-        log(
-            `[WeeklySummary]   Applicable definitions: ${applicableDefinitions.length} (${applicableDefinitions.map((d) => d.name).join(', ')})`,
-            'debug'
-        )
-
-        // Read frontmatter values
+        // Read ALL frontmatter values
         const frontmatter = frontmatterService.read(file)
 
         log(
@@ -167,35 +147,17 @@ async function executeWeeklySummary(plugin: LifeTrackerPlugin): Promise<void> {
             'debug'
         )
 
-        // Collect values for relevant properties
+        // Collect all non-internal frontmatter values
         const values: Record<string, unknown> = {}
-        const targetDefinitions = getTargetDefinitions(applicableDefinitions, includeProperties)
 
-        log(
-            `[WeeklySummary]   Target definitions (after type filter): ${targetDefinitions.length} (${targetDefinitions.map((d) => `${d.name}:${d.type}`).join(', ')})`,
-            'debug'
-        )
+        for (const [key, value] of Object.entries(frontmatter)) {
+            // Skip Obsidian internal keys
+            if (EXCLUDED_KEYS.has(key)) continue
+            // Skip null/undefined
+            if (value === null || value === undefined) continue
 
-        if (targetDefinitions.length === 0) {
-            skippedByNoProperties++
-            log(
-                `[WeeklySummary]   SKIPPED: no target definitions match for file ${file.basename}`,
-                'debug'
-            )
-            continue
-        }
-
-        for (const def of targetDefinitions) {
-            const key = findFrontmatterKey(frontmatter, def.name)
-            if (key) {
-                values[def.name] = frontmatter[key]
-                log(
-                    `[WeeklySummary]   Value found: ${def.name} = ${JSON.stringify(frontmatter[key])}`,
-                    'debug'
-                )
-            } else {
-                log(`[WeeklySummary]   Value NOT found in frontmatter: ${def.name}`, 'debug')
-            }
+            values[key] = value
+            log(`[WeeklySummary]   ${key} = ${JSON.stringify(value)}`, 'debug')
         }
 
         if (Object.keys(values).length > 0) {
@@ -206,26 +168,19 @@ async function executeWeeklySummary(plugin: LifeTrackerPlugin): Promise<void> {
             })
         } else {
             skippedByNoValues++
-            log(
-                `[WeeklySummary]   SKIPPED: no values found in frontmatter for ${file.basename}`,
-                'debug'
-            )
+            log(`[WeeklySummary]   SKIPPED: empty frontmatter for ${file.basename}`, 'debug')
         }
     }
 
     // Log summary of filtering
     log(
-        `[WeeklySummary] Filtering summary: ${allFiles.length} total files -> ${noteDataList.length} with data`,
+        `[WeeklySummary] Filtering summary: ${allFiles.length} total -> ${noteDataList.length} with data`,
         'debug'
     )
     log(`[WeeklySummary]   Skipped by tag filter: ${skippedByTag}`, 'debug')
-    log(
-        `[WeeklySummary]   Skipped by date parse (filename not YYYY-MM-DD): ${skippedByDateParse}`,
-        'debug'
-    )
+    log(`[WeeklySummary]   Skipped by date parse: ${skippedByDateParse}`, 'debug')
     log(`[WeeklySummary]   Skipped by date range: ${skippedByDateRange}`, 'debug')
-    log(`[WeeklySummary]   Skipped by no applicable properties: ${skippedByNoProperties}`, 'debug')
-    log(`[WeeklySummary]   Skipped by no frontmatter values: ${skippedByNoValues}`, 'debug')
+    log(`[WeeklySummary]   Skipped by empty frontmatter: ${skippedByNoValues}`, 'debug')
 
     // Sort by date
     noteDataList.sort((a, b) => a.date.getTime() - b.date.getTime())
@@ -342,36 +297,6 @@ function fileHasTag(plugin: LifeTrackerPlugin, file: TFile, tag: string): boolea
     }
 
     return false
-}
-
-/**
- * Get the target property definitions based on include list
- */
-function getTargetDefinitions(
-    applicableDefinitions: PropertyDefinition[],
-    includeProperties: string[]
-): PropertyDefinition[] {
-    if (includeProperties.length > 0) {
-        // Filter to only the specified properties
-        const lowerInclude = includeProperties.map((p) => p.toLowerCase())
-        return applicableDefinitions.filter((d) => lowerInclude.includes(d.name.toLowerCase()))
-    }
-
-    // Auto-include: all numeric and boolean properties
-    return applicableDefinitions.filter(
-        (d) => d.type === 'number' || d.type === 'checkbox' || d.type === 'text'
-    )
-}
-
-/**
- * Find a frontmatter key case-insensitively
- */
-function findFrontmatterKey(
-    frontmatter: Record<string, unknown>,
-    name: string
-): string | undefined {
-    const lowerName = name.toLowerCase()
-    return Object.keys(frontmatter).find((key) => key.toLowerCase() === lowerName)
 }
 
 /**
