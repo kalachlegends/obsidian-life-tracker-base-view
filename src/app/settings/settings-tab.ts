@@ -23,6 +23,11 @@ import {
     type AIProviderType,
     type WeeklySummaryDateRange
 } from '../types'
+import {
+    HCGATEWAY_DATA_TYPE_CATEGORIES,
+    HCGATEWAY_DATA_TYPE_LABELS,
+    type HCGatewayDataType
+} from '../../integrations/hcgateway/types'
 
 /**
  * Color scheme options for the preset dropdown
@@ -1413,6 +1418,12 @@ export class LifeTrackerPluginSettingTab extends PluginSettingTab {
 
         // AI Integration
         this.renderAIIntegration(containerEl)
+
+        // Separator between integrations
+        containerEl.createEl('hr', { cls: 'lt-settings-separator' })
+
+        // HCGateway (Health Connect) Integration
+        this.renderHCGatewayIntegration(containerEl)
     }
 
     // ========================================
@@ -1754,6 +1765,205 @@ export class LifeTrackerPluginSettingTab extends PluginSettingTab {
                 textarea.inputEl.rows = 4
                 textarea.inputEl.classList.add('lt-ai-prompt-input')
             })
+    }
+
+    // ========================================
+    // HCGateway Integration Section (within Integrations Tab)
+    // ========================================
+
+    private renderHCGatewayIntegration(containerEl: HTMLElement): void {
+        new Setting(containerEl).setName('Health Connect (HCGateway)').setHeading()
+
+        const hcDesc = new DocumentFragment()
+        hcDesc.createDiv({
+            text: 'Connect to HCGateway to import health data from Android Health Connect. Requires the HCGateway server running on your network.'
+        })
+        new Setting(containerEl).setDesc(hcDesc)
+
+        // Enable/Disable Toggle
+        new Setting(containerEl)
+            .setName('Enable HCGateway integration')
+            .setDesc('Connect to HCGateway for health data synchronization during capture')
+            .addToggle((toggle) => {
+                toggle.setValue(this.plugin.settings.hcgateway.enabled).onChange(async (value) => {
+                    await this.plugin.updateSettings((draft) => {
+                        draft.hcgateway.enabled = value
+                    })
+                    this.display()
+                })
+            })
+
+        if (!this.plugin.settings.hcgateway.enabled) return
+
+        // Server URL
+        new Setting(containerEl)
+            .setName('Server URL')
+            .setDesc('HCGateway server base URL')
+            .addText((text) => {
+                text.setPlaceholder('http://localhost:6644')
+                    .setValue(this.plugin.settings.hcgateway.baseUrl)
+                    .onChange(async (value) => {
+                        await this.plugin.updateSettings((draft) => {
+                            draft.hcgateway.baseUrl = value.trim() || 'http://localhost:6644'
+                        })
+                        this.plugin.hcGatewayAPI.setBaseUrl(value.trim() || 'http://localhost:6644')
+                    })
+            })
+
+        // Username
+        new Setting(containerEl)
+            .setName('Username')
+            .setDesc('Your HCGateway username')
+            .addText((text) => {
+                text.setPlaceholder('username')
+                    .setValue(this.plugin.settings.hcgateway.username)
+                    .onChange(async (value) => {
+                        await this.plugin.updateSettings((draft) => {
+                            draft.hcgateway.username = value
+                        })
+                    })
+            })
+
+        // Password — saved to settings so capture can log in automatically
+        new Setting(containerEl)
+            .setName('Password')
+            .setDesc('Saved to settings so the plugin can log in automatically during capture.')
+            .addText((text) => {
+                text.setPlaceholder('Enter password')
+                    .setValue(this.plugin.settings.hcgateway.password)
+                    .onChange(async (value) => {
+                        await this.plugin.updateSettings((draft) => {
+                            draft.hcgateway.password = value
+                        })
+                    })
+                text.inputEl.type = 'password'
+            })
+
+        // Test Connection Button
+        new Setting(containerEl)
+            .setName('Connection')
+            .setDesc('Test your HCGateway connection with stored credentials')
+            .addButton((button) => {
+                button
+                    .setButtonText('Test connection')
+                    .setIcon('refresh-cw')
+                    .onClick(async () => {
+                        try {
+                            button.setDisabled(true)
+                            button.setButtonText('Testing...')
+                            button.buttonEl.style.color = ''
+
+                            const username = this.plugin.settings.hcgateway.username
+                            const password = this.plugin.settings.hcgateway.password
+
+                            if (!username || !password) {
+                                new Notice('HCGateway: please enter both username and password')
+                                return
+                            }
+
+                            new Notice('Testing HCGateway connection...')
+
+                            const loginSuccess = await this.plugin.hcGatewayAuthService.login(
+                                username,
+                                password
+                            )
+
+                            if (loginSuccess) {
+                                button.buttonEl.style.color = 'var(--text-success)'
+                                new Notice('HCGateway: connection successful!')
+                            } else {
+                                button.buttonEl.style.color = 'var(--text-error)'
+                                const state = this.plugin.hcGatewayAuthService.getState()
+                                new Notice(
+                                    `HCGateway: connection failed — ${state.lastError ?? 'Unknown error'}`
+                                )
+                            }
+                        } catch (error) {
+                            console.error('HCGateway connection test failed:', error)
+                            const msg = error instanceof Error ? error.message : 'Unknown error'
+                            new Notice(`HCGateway: connection error — ${msg}`)
+                            button.buttonEl.style.color = 'var(--text-error)'
+                        } finally {
+                            button.setDisabled(false)
+                            button.setButtonText('Test connection')
+                        }
+                    })
+            })
+
+        // Separator before sync settings
+        containerEl.createEl('hr', { cls: 'lt-settings-separator' })
+
+        // Property prefix
+        new Setting(containerEl)
+            .setName('Property prefix')
+            .setDesc(
+                'Prefix for frontmatter properties (e.g., "health" creates "health_steps", "health_heart_rate")'
+            )
+            .addText((text) => {
+                text.setPlaceholder('health')
+                    .setValue(this.plugin.settings.hcgateway.propertyPrefix)
+                    .onChange(async (value) => {
+                        await this.plugin.updateSettings((draft) => {
+                            draft.hcgateway.propertyPrefix = value.trim()
+                        })
+                    })
+            })
+
+        // Data types section
+        containerEl.createEl('hr', { cls: 'lt-settings-separator' })
+        new Setting(containerEl).setName('Data types to sync').setHeading()
+
+        const dataTypesDesc = new DocumentFragment()
+        dataTypesDesc.createDiv({
+            text: 'Select which health data types to fetch during capture. When all are disabled, all types will be fetched.'
+        })
+        new Setting(containerEl).setDesc(dataTypesDesc)
+
+        // Render category-grouped toggles
+        const enabledSet = new Set(this.plugin.settings.hcgateway.enabledDataTypes)
+
+        for (const [category, dataTypes] of Object.entries(HCGATEWAY_DATA_TYPE_CATEGORIES)) {
+            // Category heading
+            new Setting(containerEl).setName(category).setHeading()
+
+            for (const dataType of dataTypes) {
+                const label = HCGATEWAY_DATA_TYPE_LABELS[dataType]
+                // When enabledDataTypes is empty, all types are considered enabled (default)
+                const isEnabled = enabledSet.size === 0 || enabledSet.has(dataType)
+
+                new Setting(containerEl).setName(label).addToggle((toggle) => {
+                    toggle.setValue(isEnabled).onChange(async (value) => {
+                        await this.plugin.updateSettings((draft) => {
+                            const currentEnabled = new Set(draft.hcgateway.enabledDataTypes)
+
+                            if (currentEnabled.size === 0 && !value) {
+                                // Transitioning from "all enabled" to disabling one:
+                                // Add all types except the one being disabled
+                                const allTypes = Object.keys(
+                                    HCGATEWAY_DATA_TYPE_LABELS
+                                ) as HCGatewayDataType[]
+                                draft.hcgateway.enabledDataTypes = allTypes.filter(
+                                    (dt) => dt !== dataType
+                                )
+                            } else if (value) {
+                                currentEnabled.add(dataType)
+                                draft.hcgateway.enabledDataTypes = [...currentEnabled]
+                                // If all types are now enabled, clear the array (means "all")
+                                const allTypes = Object.keys(
+                                    HCGATEWAY_DATA_TYPE_LABELS
+                                ) as HCGatewayDataType[]
+                                if (allTypes.every((dt) => currentEnabled.has(dt))) {
+                                    draft.hcgateway.enabledDataTypes = []
+                                }
+                            } else {
+                                currentEnabled.delete(dataType)
+                                draft.hcgateway.enabledDataTypes = [...currentEnabled]
+                            }
+                        })
+                    })
+                })
+            }
+        }
     }
 
     // ========================================

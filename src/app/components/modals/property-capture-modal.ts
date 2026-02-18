@@ -160,6 +160,21 @@ export class PropertyCaptureModal extends Modal {
             this.loadProperties()
         }
 
+        // Auto-fetch HCGateway health data if integration is enabled and credentials are set
+        const hcGatewayEnabled = this.plugin.settings.hcgateway.enabled
+        const hcGatewayUser = this.plugin.settings.hcgateway.username
+        const hcGatewayPass = this.plugin.settings.hcgateway.password
+
+        if (hcGatewayEnabled && hcGatewayUser && hcGatewayPass) {
+            log('[Capture] HCGateway integration enabled, auto-fetching health data', 'debug')
+            await this.autoFetchHCGatewayData()
+            // Reload properties to reflect updated frontmatter values
+            this.loadProperties()
+        } else if (hcGatewayEnabled && (!hcGatewayUser || !hcGatewayPass)) {
+            log('[Capture] HCGateway enabled but credentials missing', 'warn')
+            new Notice('HCGateway: username or password not set — skipping health data sync')
+        }
+
         return this.sortedDefinitions.length > 0
     }
 
@@ -250,6 +265,136 @@ export class PropertyCaptureModal extends Modal {
             console.error('[Capture] TickTick auto-fetch error:', error)
             new Notice(
                 `TickTick fetch error: ${error instanceof Error ? error.message : 'Unknown error'}`
+            )
+        }
+    }
+
+    /**
+     * Auto-fetch HCGateway health data for the current file's date.
+     * Performs a fresh login on every capture, then fetches all enabled data types.
+     * Shows Notice on every error so the user always knows what went wrong.
+     */
+    private async autoFetchHCGatewayData(): Promise<void> {
+        const file = this.getCurrentFile()
+        if (!file) return
+
+        log(`[Capture] Auto-fetching HCGateway health data for ${file.basename}`, 'debug')
+
+        // Show loading state in the modal
+        const { contentEl } = this
+        contentEl.empty()
+        const loadingEl = contentEl.createDiv({ cls: 'lt-carousel-container' })
+        const title = formatFileTitleWithWeekday(file.basename)
+        loadingEl.createDiv({
+            cls: 'lt-carousel-file-name',
+            text: title
+        })
+        const loadingCard = loadingEl.createDiv({ cls: 'lt-carousel-card' })
+        loadingCard.createDiv({
+            cls: 'lt-carousel-label',
+            text: 'Fetching health data...'
+        })
+
+        try {
+            const { parseDateFromFilename } = await import('../../../utils/date.utils')
+            const { HCGatewaySyncService } =
+                await import('../../../integrations/hcgateway/services/HCGatewaySyncService')
+            const { HCGatewayAPI } =
+                await import('../../../integrations/hcgateway/api/HCGatewayAPI')
+
+            const parsed = parseDateFromFilename(file.basename)
+
+            if (!parsed) {
+                log(
+                    `[Capture] Could not parse date from filename: ${file.basename}, skipping HCGateway fetch`,
+                    'debug'
+                )
+                new Notice(
+                    `HCGateway: cannot parse date from "${file.basename}" — skipping health sync`
+                )
+                return
+            }
+
+            // Format as YYYY-MM-DD for the sync service
+            const year = parsed.date.getFullYear()
+            const month = String(parsed.date.getMonth() + 1).padStart(2, '0')
+            const day = String(parsed.date.getDate()).padStart(2, '0')
+            const dateStr = `${year}-${month}-${day}`
+
+            const { username, password, baseUrl, enabledDataTypes, propertyPrefix } =
+                this.plugin.settings.hcgateway
+
+            log(
+                `[Capture] HCGateway settings: baseUrl=${baseUrl}, user=${username}, prefix=${propertyPrefix}, enabledDataTypes=[${enabledDataTypes.join(', ') || 'ALL'}]`,
+                'debug'
+            )
+            log(`[Capture] Fetching HCGateway health data for date: ${dateStr}`, 'debug')
+
+            // Create API client and perform a fresh login
+            const api = new HCGatewayAPI(baseUrl)
+
+            log(`[Capture] HCGateway: logging in as "${username}" to ${baseUrl}`, 'debug')
+            try {
+                await api.login(username, password)
+            } catch (loginError) {
+                const msg = loginError instanceof Error ? loginError.message : String(loginError)
+                log(`[Capture] HCGateway login failed: ${msg}`, 'error')
+                new Notice(`HCGateway login failed: ${msg}`)
+                return
+            }
+
+            log('[Capture] HCGateway login successful, starting sync', 'debug')
+
+            const syncService = new HCGatewaySyncService(api)
+
+            const result = await syncService.syncToNote(
+                this.plugin.app,
+                file,
+                dateStr,
+                enabledDataTypes,
+                propertyPrefix
+            )
+
+            log(
+                `[Capture] HCGateway sync result: success=${String(result.success)}, propertiesWritten=${result.propertiesWritten}, totalResults=${result.results.length}, errors=${result.errors.length}`,
+                'debug'
+            )
+
+            if (result.results.length > 0) {
+                const nonEmpty = result.results.filter((r) => !r.empty)
+                const empty = result.results.filter((r) => r.empty)
+                log(
+                    `[Capture] HCGateway data types with data: [${nonEmpty.map((r) => `${r.dataType}(${r.recordCount}rec=${JSON.stringify(r.value)})`).join(', ')}]`,
+                    'debug'
+                )
+                if (empty.length > 0) {
+                    log(
+                        `[Capture] HCGateway empty data types: [${empty.map((r) => r.dataType).join(', ')}]`,
+                        'debug'
+                    )
+                }
+            }
+
+            if (result.errors.length > 0) {
+                log(`[Capture] HCGateway sync errors: ${result.errors.join('; ')}`, 'warn')
+                for (const err of result.errors) {
+                    new Notice(`HCGateway error: ${err}`)
+                }
+            }
+
+            if (result.success && result.propertiesWritten > 0) {
+                const nonEmptyResults = result.results.filter((r) => !r.empty)
+                new Notice(
+                    `Health data saved: ${result.propertiesWritten} properties (${nonEmptyResults.length} data types)`
+                )
+            } else if (result.propertiesWritten === 0 && result.errors.length === 0) {
+                new Notice(`HCGateway: no health data found for ${dateStr}`)
+            }
+        } catch (error) {
+            log(`[Capture] HCGateway auto-fetch error: ${String(error)}`, 'error')
+            console.error('[Capture] HCGateway auto-fetch error:', error)
+            new Notice(
+                `HCGateway error: ${error instanceof Error ? error.message : 'Unknown error'}`
             )
         }
     }

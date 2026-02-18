@@ -21,6 +21,9 @@ import { TickTickAuthService } from '../integrations/ticktick/services/TickTickA
 import { TickTickSyncService } from '../integrations/ticktick/services/TickTickSyncService'
 import { TickTickToManualConverter } from '../integrations/ticktick/services/TickTickToManualConverter'
 import { AIService } from '../integrations/ai/services/AIService'
+import { HCGatewayAPI } from '../integrations/hcgateway/api/HCGatewayAPI'
+import { HCGatewayAuthService } from '../integrations/hcgateway/services/HCGatewayAuthService'
+import { HCGatewaySyncService } from '../integrations/hcgateway/services/HCGatewaySyncService'
 
 export class LifeTrackerPlugin extends Plugin {
     /**
@@ -64,6 +67,21 @@ export class LifeTrackerPlugin extends Plugin {
     aiService!: AIService
 
     /**
+     * HCGateway API client
+     */
+    hcGatewayAPI!: HCGatewayAPI
+
+    /**
+     * HCGateway authentication service
+     */
+    hcGatewayAuthService!: HCGatewayAuthService
+
+    /**
+     * HCGateway synchronization service
+     */
+    hcGatewaySyncService!: HCGatewaySyncService
+
+    /**
      * Register a file provider as active (called when view becomes visible)
      */
     setActiveFileProvider(provider: FileProvider | null): void {
@@ -95,6 +113,9 @@ export class LifeTrackerPlugin extends Plugin {
 
         // Initialize TickTick services
         this.initializeTickTickServices()
+
+        // Initialize HCGateway services
+        this.initializeHCGatewayServices()
 
         // Initialize AI service
         this.aiService = new AIService(this.settings.ai.provider)
@@ -163,6 +184,18 @@ export class LifeTrackerPlugin extends Plugin {
     }
 
     /**
+     * Initialize HCGateway integration services.
+     * No token restore — a fresh login is performed on every capture.
+     */
+    private initializeHCGatewayServices(): void {
+        const { baseUrl } = this.settings.hcgateway
+
+        this.hcGatewayAPI = new HCGatewayAPI(baseUrl)
+        this.hcGatewayAuthService = new HCGatewayAuthService(this.hcGatewayAPI)
+        this.hcGatewaySyncService = new HCGatewaySyncService(this.hcGatewayAPI)
+    }
+
+    /**
      * Load the plugin settings
      */
     async loadSettings() {
@@ -209,6 +242,14 @@ export class LifeTrackerPlugin extends Plugin {
             // Load thoughts property name
             if (typeof loadedSettings.thoughtsPropertyName === 'string') {
                 draft.thoughtsPropertyName = loadedSettings.thoughtsPropertyName
+            }
+
+            // Load HCGateway settings
+            if (loadedSettings.hcgateway) {
+                draft.hcgateway = {
+                    ...draft.hcgateway,
+                    ...loadedSettings.hcgateway
+                }
             }
 
             // Load AI settings

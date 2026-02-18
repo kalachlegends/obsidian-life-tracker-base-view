@@ -122,6 +122,24 @@ When the "Capture properties" command is invoked from a custom base view (Life T
 - Weekly summary tag filter is case-insensitive, matches frontmatter tags without `#` prefix.
 - If AI is disabled or unconfigured, capture completes normally without AI analysis.
 
+## HCGateway Credentials
+
+- Username and password are persisted to `data.json` so the plugin can log in automatically on every capture without user interaction.
+- No tokens are persisted — a fresh login is performed on each capture.
+
+## HCGateway Integration
+
+- HCGateway integration is opt-in: disabled by default, requires explicit enable + server URL + credentials.
+- Data is fetched automatically during the "Capture properties" command (same trigger point as TickTick).
+- A fresh login is performed on every capture (no token caching).
+- The date for fetching is derived from the note's filename (YYYY-MM-DD or YYYY-Www format).
+- All available health data types are fetched by default. Users can disable specific types in settings.
+- When `enabledDataTypes` is empty, all 28 data types are fetched. When populated, only the listed types are fetched.
+- Health Connect data uses nested structures (samples arrays, unit objects) that are normalized before aggregation.
+- Fetched values are aggregated per data type (sum for steps/distance/calories, average for heart rate/temperature, latest for weight/height, duration for sleep) and written as frontmatter properties.
+- Property names follow the pattern `{prefix}_{snake_case_type}` (e.g., `health_heart_rate`, `health_steps`).
+- Every error (login, fetch, write) is shown to the user via Notice.
+
 ## Thoughts Capture
 
 - Thoughts are stored as a frontmatter list property (configurable name, default: `thoughts`).

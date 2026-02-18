@@ -39,6 +39,7 @@ export class HCGatewayAuthService {
      * Login with username/password. Updates internal state and API client tokens.
      */
     async login(username: string, password: string): Promise<boolean> {
+        log(`[HCGateway Auth] login attempt for user=${username}`, 'debug')
         try {
             const response = await this.api.login(username, password)
             this.state.token = response.token
@@ -46,11 +47,12 @@ export class HCGatewayAuthService {
             this.state.tokenExpiry = response.expiry
             this.state.isAuthenticated = true
             this.state.lastError = null
+            log(`[HCGateway Auth] login success, expiry=${response.expiry}`, 'debug')
             return true
         } catch (error) {
             this.state.lastError = error instanceof Error ? error.message : 'Unknown error'
             this.state.isAuthenticated = false
-            log(`HCGateway login failed: ${this.state.lastError}`, 'error')
+            log(`[HCGateway Auth] login failed: ${this.state.lastError}`, 'error')
             return false
         }
     }
@@ -59,6 +61,10 @@ export class HCGatewayAuthService {
      * Restore a previous session from persisted tokens.
      */
     restoreSession(token: string, refreshToken: string, tokenExpiry: string): void {
+        log(
+            `[HCGateway Auth] restoring session, token=${token.slice(0, 8)}..., expiry=${tokenExpiry}`,
+            'debug'
+        )
         this.api.setToken(token)
         this.api.setRefreshToken(refreshToken)
         this.api.setTokenExpiry(tokenExpiry)
@@ -73,6 +79,7 @@ export class HCGatewayAuthService {
      * Clear all auth state and tokens.
      */
     clearSession(): void {
+        log('[HCGateway Auth] clearing session, all tokens removed', 'debug')
         this.api.setToken('')
         this.api.setRefreshToken('')
         this.api.setTokenExpiry('')
@@ -90,16 +97,21 @@ export class HCGatewayAuthService {
      * Returns true if the token is still valid.
      */
     async validateToken(): Promise<boolean> {
-        if (!this.state.token) return false
+        if (!this.state.token) {
+            log('[HCGateway Auth] validateToken: no token to validate', 'debug')
+            return false
+        }
 
+        log('[HCGateway Auth] validateToken: testing with lightweight fetch...', 'debug')
         try {
             // Try fetching steps with an impossible date filter (should return empty array)
             await this.api.fetchData('steps', {
                 start: { $gte: '9999-01-01T00:00:00' }
             })
+            log('[HCGateway Auth] validateToken: token is valid', 'debug')
             return true
         } catch (error) {
-            log('HCGateway token validation failed', 'error', error)
+            log('[HCGateway Auth] validateToken: token invalid or expired', 'error', error)
             this.state.isAuthenticated = false
             this.state.lastError = 'Token expired or invalid'
             return false
