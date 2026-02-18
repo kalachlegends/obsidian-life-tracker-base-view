@@ -1,5 +1,5 @@
 import { requestUrl } from 'obsidian'
-import type { ITask, IFocusHeatmapEntry, IFocusDistribution, IHabit } from '../api/types/Task'
+import type { ITask, IFocusHeatmapEntry, IFocusDistribution } from '../api/types/Task'
 import type { IProject } from '../api/types/Project'
 import { parseTickTickTasks } from './TickTickDirectParser'
 
@@ -268,27 +268,6 @@ export class TickTickAPIService {
     }
 
     /**
-     * Get all habits.
-     * Uses V2 endpoint: /habits
-     */
-    async getHabits(): Promise<IHabit[]> {
-        const url = `${this.apiUrl}/habits`
-
-        console.debug(`[TickTick] Fetching habits: ${url}`)
-        try {
-            const response = await this.makeRequest(url, 'GET')
-            if (Array.isArray(response)) {
-                console.debug(`[TickTick] Got ${response.length} habits`)
-                return response as IHabit[]
-            }
-            return []
-        } catch (error) {
-            console.debug('[TickTick] Habits fetch failed:', error)
-            return []
-        }
-    }
-
-    /**
      * Main parsing function - fetches tasks and returns formatted result
      * Same output format as your existing TickTickInput script
      *
@@ -296,16 +275,16 @@ export class TickTickAPIService {
      * @returns Parsed result object matching your existing parser format
      */
     async parseTasksForDateRange(dateRange: DateRange): Promise<Record<string, unknown>> {
-        // Fetch all necessary data in parallel
-        const [tasks, projects, focusHeatmap, focusDistribution, habits] = await Promise.all([
+        // Fetch tasks, projects, and focus data in parallel
+        // Habits are already parsed from task tags in TickTickDirectParser
+        const [tasks, projects, focusHeatmap, focusDistribution] = await Promise.all([
             this.getTasksForDateRange(dateRange),
             this.getProjects(),
             this.getFocusHeatmap(dateRange),
-            this.getFocusDistribution(dateRange),
-            this.getHabits()
+            this.getFocusDistribution(dateRange)
         ])
 
-        // Parse using the direct parser
+        // Parse using the direct parser (handles habits via task tags)
         const result = parseTickTickTasks(tasks, projects, dateRange)
 
         // Focus data — flat top-level keys for YAML frontmatter
@@ -332,32 +311,11 @@ export class TickTickAPIService {
             result[key] = Math.round(Number(seconds) / 60)
         }
 
-        // Habit data — flat top-level keys for YAML frontmatter
-        const activeHabits = habits.filter((h) => h.status !== 2)
-        result['habits_total'] = habits.length
-        result['habits_active'] = activeHabits.length
-
-        // Habit names as a list (YAML array)
-        result['habit_names'] = activeHabits.map((h) => h.name)
-
-        // Habit streaks as individual keys: habit_streak_<name>
-        for (const h of activeHabits) {
-            const key = `habit_streak_${h.name.toLowerCase().replace(/\s+/g, '_')}`
-            result[key] = h.currentStreak ?? 0
-        }
-
-        // Habit checkin totals as individual keys: habit_checkins_<name>
-        for (const h of activeHabits) {
-            const key = `habit_checkins_${h.name.toLowerCase().replace(/\s+/g, '_')}`
-            result[key] = h.totalCheckIns ?? 0
-        }
-
         // Add input reference for debugging
         result['input'] = `TickTick API: ${dateRange.from} to ${dateRange.to}`
 
         console.debug(
             `[TickTick] Parse result: focus=${focusMinutesFromHeatmap}min, ` +
-                `habits=${activeHabits.length} active, ` +
                 `tasks=${tasks.length}`
         )
 
