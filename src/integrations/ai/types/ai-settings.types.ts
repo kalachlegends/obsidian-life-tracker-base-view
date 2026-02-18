@@ -41,11 +41,26 @@ export interface AISettings {
     /** Custom system prompt for capture analysis */
     captureAnalysisPrompt: string
 
+    /** Custom system prompt for daily summary */
+    dailySummaryPrompt: string
+
+    /** Daily summary configuration */
+    dailySummary: DailySummarySettings
+
     /** Custom system prompt for weekly summary */
     weeklySummaryPrompt: string
 
     /** Weekly summary configuration */
     weeklySummary: WeeklySummarySettings
+
+    /** Custom system prompt for monthly summary */
+    monthlySummaryPrompt: string
+
+    /** Monthly summary configuration */
+    monthlySummary: MonthlySummarySettings
+
+    /** Auto-save reports to note after AI generation */
+    autoSaveToNote: boolean
 }
 
 /**
@@ -76,6 +91,66 @@ export type WeeklySummaryDateRange = 'this_week' | 'last_week'
 export const WEEKLY_SUMMARY_DATE_RANGE_LABELS: Record<WeeklySummaryDateRange, string> = {
     this_week: 'This week',
     last_week: 'Last week'
+}
+
+/**
+ * Monthly summary specific settings
+ */
+export interface MonthlySummarySettings {
+    /** Tag to filter notes for monthly summary (e.g., "daily") */
+    filterTag: string
+
+    /** Default date range: 'this_month' | 'last_month' */
+    defaultDateRange: MonthlySummaryDateRange
+
+    /** Include CSV data in the prompt */
+    includeCsvData: boolean
+
+    /** Properties to include (empty = all numeric/boolean properties) */
+    includeProperties: string[]
+}
+
+/**
+ * Monthly summary date range options
+ */
+export type MonthlySummaryDateRange = 'this_month' | 'last_month'
+
+/**
+ * Labels for monthly summary date range options
+ */
+export const MONTHLY_SUMMARY_DATE_RANGE_LABELS: Record<MonthlySummaryDateRange, string> = {
+    this_month: 'This month',
+    last_month: 'Last month'
+}
+
+/**
+ * Daily summary specific settings
+ */
+export interface DailySummarySettings {
+    /** Tag to filter notes for daily summary (e.g., "daily") */
+    filterTag: string
+
+    /** Default date range: 'today' | 'yesterday' */
+    defaultDateRange: DailySummaryDateRange
+
+    /** Include CSV data in the prompt */
+    includeCsvData: boolean
+
+    /** Properties to include (empty = all numeric/boolean properties) */
+    includeProperties: string[]
+}
+
+/**
+ * Daily summary date range options
+ */
+export type DailySummaryDateRange = 'today' | 'yesterday'
+
+/**
+ * Labels for daily summary date range options
+ */
+export const DAILY_SUMMARY_DATE_RANGE_LABELS: Record<DailySummaryDateRange, string> = {
+    today: 'Today',
+    yesterday: 'Yesterday'
 }
 
 /**
@@ -111,11 +186,31 @@ export const DEFAULT_AI_PROVIDER_CONFIG: AIProviderConfig = {
 }
 
 /**
+ * Default daily summary settings
+ */
+export const DEFAULT_DAILY_SUMMARY_SETTINGS: DailySummarySettings = {
+    filterTag: '',
+    defaultDateRange: 'today',
+    includeCsvData: true,
+    includeProperties: []
+}
+
+/**
  * Default weekly summary settings
  */
 export const DEFAULT_WEEKLY_SUMMARY_SETTINGS: WeeklySummarySettings = {
     filterTag: '',
     defaultDateRange: 'this_week',
+    includeCsvData: true,
+    includeProperties: []
+}
+
+/**
+ * Default monthly summary settings
+ */
+export const DEFAULT_MONTHLY_SUMMARY_SETTINGS: MonthlySummarySettings = {
+    filterTag: '',
+    defaultDateRange: 'this_month',
     includeCsvData: true,
     includeProperties: []
 }
@@ -128,8 +223,13 @@ export const DEFAULT_AI_SETTINGS: AISettings = {
     provider: DEFAULT_AI_PROVIDER_CONFIG,
     analyzeAfterCapture: false,
     captureAnalysisPrompt: '',
+    dailySummaryPrompt: '',
+    dailySummary: DEFAULT_DAILY_SUMMARY_SETTINGS,
     weeklySummaryPrompt: '',
-    weeklySummary: DEFAULT_WEEKLY_SUMMARY_SETTINGS
+    weeklySummary: DEFAULT_WEEKLY_SUMMARY_SETTINGS,
+    monthlySummaryPrompt: '',
+    monthlySummary: DEFAULT_MONTHLY_SUMMARY_SETTINGS,
+    autoSaveToNote: true
 }
 
 /**

@@ -15,13 +15,17 @@ import {
     createDefaultMapping,
     AI_PROVIDER_LABELS,
     AI_MODELS,
+    DAILY_SUMMARY_DATE_RANGE_LABELS,
     WEEKLY_SUMMARY_DATE_RANGE_LABELS,
+    MONTHLY_SUMMARY_DATE_RANGE_LABELS,
     type PropertyVisualizationPreset,
     type PropertyDefinition,
     type ObsidianPropertyType,
     type MappingType,
     type AIProviderType,
-    type WeeklySummaryDateRange
+    type DailySummaryDateRange,
+    type WeeklySummaryDateRange,
+    type MonthlySummaryDateRange
 } from '../types'
 
 /**
@@ -1652,6 +1656,134 @@ export class LifeTrackerPluginSettingTab extends PluginSettingTab {
         // Separator
         containerEl.createEl('hr', { cls: 'lt-settings-separator' })
 
+        // Auto-save reports
+        new Setting(containerEl).setName('Report saving').setHeading()
+
+        new Setting(containerEl)
+            .setName('Auto-save reports to note')
+            .setDesc(
+                'Automatically save AI-generated reports (daily, weekly, monthly) to a note in the "Life Tracker Reports" folder.'
+            )
+            .addToggle((toggle) => {
+                toggle.setValue(this.plugin.settings.ai.autoSaveToNote).onChange(async (value) => {
+                    await this.plugin.updateSettings(
+                        (draft) => {
+                            draft.ai.autoSaveToNote = value
+                        },
+                        { type: 'ai-settings-changed' }
+                    )
+                })
+            })
+
+        // Separator
+        containerEl.createEl('hr', { cls: 'lt-settings-separator' })
+
+        // Daily Summary Settings
+        new Setting(containerEl).setName('Daily summary').setHeading()
+
+        new Setting(containerEl)
+            .setName('Filter tag')
+            .setDesc(
+                'Only include notes with this tag in daily summaries (without #). Leave empty for all notes.'
+            )
+            .addText((text) => {
+                text.setPlaceholder('e.g., daily')
+                    .setValue(this.plugin.settings.ai.dailySummary.filterTag)
+                    .onChange(async (value) => {
+                        await this.plugin.updateSettings(
+                            (draft) => {
+                                draft.ai.dailySummary.filterTag = value
+                            },
+                            { type: 'ai-settings-changed' }
+                        )
+                    })
+            })
+
+        new Setting(containerEl)
+            .setName('Default date range')
+            .setDesc('Default time period for daily summaries')
+            .addDropdown((dropdown) => {
+                const options: Record<string, string> = {}
+                for (const [key, label] of Object.entries(DAILY_SUMMARY_DATE_RANGE_LABELS)) {
+                    options[key] = label
+                }
+                dropdown
+                    .addOptions(options)
+                    .setValue(this.plugin.settings.ai.dailySummary.defaultDateRange)
+                    .onChange(async (value) => {
+                        await this.plugin.updateSettings(
+                            (draft) => {
+                                draft.ai.dailySummary.defaultDateRange =
+                                    value as DailySummaryDateRange
+                            },
+                            { type: 'ai-settings-changed' }
+                        )
+                    })
+            })
+
+        new Setting(containerEl)
+            .setName('Include CSV data')
+            .setDesc('Include raw CSV data in the AI prompt for detailed analysis')
+            .addToggle((toggle) => {
+                toggle
+                    .setValue(this.plugin.settings.ai.dailySummary.includeCsvData)
+                    .onChange(async (value) => {
+                        await this.plugin.updateSettings(
+                            (draft) => {
+                                draft.ai.dailySummary.includeCsvData = value
+                            },
+                            { type: 'ai-settings-changed' }
+                        )
+                    })
+            })
+
+        new Setting(containerEl)
+            .setName('Include properties')
+            .setDesc(
+                'Comma-separated list of property names to include. Leave empty to auto-include all numeric and boolean properties.'
+            )
+            .addTextArea((textarea) => {
+                textarea
+                    .setPlaceholder('sleep, mood, energy, exercise')
+                    .setValue(this.plugin.settings.ai.dailySummary.includeProperties.join(', '))
+                    .onChange(async (value) => {
+                        await this.plugin.updateSettings(
+                            (draft) => {
+                                draft.ai.dailySummary.includeProperties = value
+                                    .split(',')
+                                    .map((v) => v.trim())
+                                    .filter(Boolean)
+                            },
+                            { type: 'ai-settings-changed' }
+                        )
+                    })
+                textarea.inputEl.rows = 2
+            })
+
+        new Setting(containerEl)
+            .setName('Daily summary prompt')
+            .setDesc('Custom system prompt for daily summary. Leave empty for the default prompt.')
+            .addTextArea((textarea) => {
+                textarea
+                    .setPlaceholder(
+                        'You are a life tracking analyst. Analyze the daily data and provide a summary with accomplishments, pending tasks, and recommendations...'
+                    )
+                    .setValue(this.plugin.settings.ai.dailySummaryPrompt)
+                    .onChange(async (value) => {
+                        await this.plugin.updateSettings(
+                            (draft) => {
+                                draft.ai.dailySummaryPrompt = value
+                            },
+                            { type: 'ai-settings-changed' }
+                        )
+                    })
+                textarea.inputEl.rows = 4
+                textarea.inputEl.classList.add('lt-ai-prompt-input')
+            })
+
+        // Separator
+        containerEl.createEl('hr', { cls: 'lt-settings-separator' })
+
         // Weekly Summary Settings
         new Setting(containerEl).setName('Weekly summary').setHeading()
 
@@ -1747,6 +1879,114 @@ export class LifeTrackerPluginSettingTab extends PluginSettingTab {
                         await this.plugin.updateSettings(
                             (draft) => {
                                 draft.ai.weeklySummaryPrompt = value
+                            },
+                            { type: 'ai-settings-changed' }
+                        )
+                    })
+                textarea.inputEl.rows = 4
+                textarea.inputEl.classList.add('lt-ai-prompt-input')
+            })
+
+        // Separator
+        containerEl.createEl('hr', { cls: 'lt-settings-separator' })
+
+        // Monthly Summary Settings
+        new Setting(containerEl).setName('Monthly summary').setHeading()
+
+        new Setting(containerEl)
+            .setName('Filter tag')
+            .setDesc(
+                'Only include notes with this tag in monthly summaries (without #). Leave empty for all notes.'
+            )
+            .addText((text) => {
+                text.setPlaceholder('e.g., daily')
+                    .setValue(this.plugin.settings.ai.monthlySummary.filterTag)
+                    .onChange(async (value) => {
+                        await this.plugin.updateSettings(
+                            (draft) => {
+                                draft.ai.monthlySummary.filterTag = value
+                            },
+                            { type: 'ai-settings-changed' }
+                        )
+                    })
+            })
+
+        new Setting(containerEl)
+            .setName('Default date range')
+            .setDesc('Default time period for monthly summaries')
+            .addDropdown((dropdown) => {
+                const options: Record<string, string> = {}
+                for (const [key, label] of Object.entries(MONTHLY_SUMMARY_DATE_RANGE_LABELS)) {
+                    options[key] = label
+                }
+                dropdown
+                    .addOptions(options)
+                    .setValue(this.plugin.settings.ai.monthlySummary.defaultDateRange)
+                    .onChange(async (value) => {
+                        await this.plugin.updateSettings(
+                            (draft) => {
+                                draft.ai.monthlySummary.defaultDateRange =
+                                    value as MonthlySummaryDateRange
+                            },
+                            { type: 'ai-settings-changed' }
+                        )
+                    })
+            })
+
+        new Setting(containerEl)
+            .setName('Include CSV data')
+            .setDesc('Include raw CSV data in the AI prompt for detailed analysis')
+            .addToggle((toggle) => {
+                toggle
+                    .setValue(this.plugin.settings.ai.monthlySummary.includeCsvData)
+                    .onChange(async (value) => {
+                        await this.plugin.updateSettings(
+                            (draft) => {
+                                draft.ai.monthlySummary.includeCsvData = value
+                            },
+                            { type: 'ai-settings-changed' }
+                        )
+                    })
+            })
+
+        new Setting(containerEl)
+            .setName('Include properties')
+            .setDesc(
+                'Comma-separated list of property names to include. Leave empty to auto-include all numeric and boolean properties.'
+            )
+            .addTextArea((textarea) => {
+                textarea
+                    .setPlaceholder('sleep, mood, energy, exercise')
+                    .setValue(this.plugin.settings.ai.monthlySummary.includeProperties.join(', '))
+                    .onChange(async (value) => {
+                        await this.plugin.updateSettings(
+                            (draft) => {
+                                draft.ai.monthlySummary.includeProperties = value
+                                    .split(',')
+                                    .map((v) => v.trim())
+                                    .filter(Boolean)
+                            },
+                            { type: 'ai-settings-changed' }
+                        )
+                    })
+                textarea.inputEl.rows = 2
+            })
+
+        new Setting(containerEl)
+            .setName('Monthly summary prompt')
+            .setDesc(
+                'Custom system prompt for monthly summary. Leave empty for the default prompt.'
+            )
+            .addTextArea((textarea) => {
+                textarea
+                    .setPlaceholder(
+                        'You are a life tracking analyst. Analyze the monthly data and provide a summary with trends, patterns, and recommendations...'
+                    )
+                    .setValue(this.plugin.settings.ai.monthlySummaryPrompt)
+                    .onChange(async (value) => {
+                        await this.plugin.updateSettings(
+                            (draft) => {
+                                draft.ai.monthlySummaryPrompt = value
                             },
                             { type: 'ai-settings-changed' }
                         )
