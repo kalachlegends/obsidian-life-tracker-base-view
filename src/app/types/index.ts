@@ -110,7 +110,13 @@ export {
     DEFAULT_SETTINGS,
     DEFAULT_BATCH_FILTER_MODE,
     BATCH_FILTER_MODE_OPTIONS,
-    getBatchFilterModeLabel
+    getBatchFilterModeLabel,
+    DEFAULT_AI_SETTINGS,
+    DEFAULT_AI_PROVIDER_CONFIG,
+    DEFAULT_WEEKLY_SUMMARY_SETTINGS,
+    AI_PROVIDER_LABELS,
+    AI_MODELS,
+    WEEKLY_SUMMARY_DATE_RANGE_LABELS
 } from './plugin'
 export type {
     PluginSettings,
@@ -119,7 +125,13 @@ export type {
     SettingsChangeInfo,
     FileProvider,
     BatchFilterMode,
-    CaptureContext
+    CaptureContext,
+    AIProviderType,
+    AIProviderConfig,
+    AISettings,
+    WeeklySummarySettings,
+    WeeklySummaryDateRange,
+    AIAnalysisResult
 } from './plugin'
 
 // View types

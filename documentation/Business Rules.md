@@ -108,3 +108,16 @@ When the "Capture properties" command is invoked from a custom base view (Life T
 - After a successful login, the password field in settings is explicitly cleared to empty string.
 - On plugin load, any previously stored password is cleared from settings as a migration safeguard.
 - Only the auth token and inboxId are persisted for session restoration.
+
+## AI Integration
+
+- AI analysis is opt-in: disabled by default, requires explicit enable + API key configuration.
+- Supported providers: OpenAI (direct API) and OpenRouter (multi-model gateway). Both use the OpenAI-compatible chat completions API.
+- API keys are persisted in plugin settings (user responsibility to secure vault).
+- "Analyze after capture" sends all captured field values from the current note to the AI for brief insights. This fires on capture completion (handleDone), not on each field save.
+- The "Generate weekly summary" command scans vault files, filters by tag and date range, computes numeric averages, builds CSV data, and sends everything to the AI.
+- Custom system prompts override defaults; empty prompt fields fall back to built-in defaults.
+- All AI network calls use Obsidian's `requestUrl` API for CORS-safe requests.
+- The weekly summary date range defaults to "this week" (Monday-Sunday, ISO week). Users can change to "last week" in settings.
+- Weekly summary tag filter is case-insensitive, matches frontmatter tags without `#` prefix.
+- If AI is disabled or unconfigured, capture completes normally without AI analysis.

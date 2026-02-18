@@ -13,10 +13,15 @@ import {
     MAPPING_TYPE_LABELS,
     createDefaultPropertyDefinition,
     createDefaultMapping,
+    AI_PROVIDER_LABELS,
+    AI_MODELS,
+    WEEKLY_SUMMARY_DATE_RANGE_LABELS,
     type PropertyVisualizationPreset,
     type PropertyDefinition,
     type ObsidianPropertyType,
-    type MappingType
+    type MappingType,
+    type AIProviderType,
+    type WeeklySummaryDateRange
 } from '../types'
 
 /**
@@ -1386,6 +1391,353 @@ export class LifeTrackerPluginSettingTab extends PluginSettingTab {
 
             new Setting(containerEl).setDesc(commandsDesc)
         }
+
+        // Separator between integrations
+        containerEl.createEl('hr', { cls: 'lt-settings-separator' })
+
+        // AI Integration
+        this.renderAIIntegration(containerEl)
+    }
+
+    // ========================================
+    // AI Integration Section (within Integrations Tab)
+    // ========================================
+
+    private renderAIIntegration(containerEl: HTMLElement): void {
+        new Setting(containerEl).setName('AI analysis').setHeading()
+
+        const aiDesc = new DocumentFragment()
+        aiDesc.createDiv({
+            text: 'Connect to AI providers to analyze your life tracking data. Supports OpenAI and OpenRouter (access to Claude, Gemini, Llama, and more).'
+        })
+        new Setting(containerEl).setDesc(aiDesc)
+
+        // Enable/Disable Toggle
+        new Setting(containerEl)
+            .setName('Enable AI integration')
+            .setDesc('Connect to an AI provider for data analysis and insights')
+            .addToggle((toggle) => {
+                toggle.setValue(this.plugin.settings.ai.enabled).onChange(async (value) => {
+                    await this.plugin.updateSettings(
+                        (draft) => {
+                            draft.ai.enabled = value
+                        },
+                        { type: 'ai-settings-changed' }
+                    )
+                    this.display()
+                })
+            })
+
+        if (!this.plugin.settings.ai.enabled) return
+
+        // Provider Selection
+        new Setting(containerEl)
+            .setName('Provider')
+            .setDesc('Select the AI provider to use')
+            .addDropdown((dropdown) => {
+                const options: Record<string, string> = {}
+                for (const [key, label] of Object.entries(AI_PROVIDER_LABELS)) {
+                    options[key] = label
+                }
+                dropdown
+                    .addOptions(options)
+                    .setValue(this.plugin.settings.ai.provider.type)
+                    .onChange(async (value) => {
+                        const providerType = value as AIProviderType
+                        // Get a sensible default model for the new provider
+                        const defaultModel = AI_MODELS[providerType]?.[0]?.id ?? ''
+                        await this.plugin.updateSettings(
+                            (draft) => {
+                                draft.ai.provider.type = providerType
+                                draft.ai.provider.model = defaultModel
+                                draft.ai.provider.baseUrl = ''
+                            },
+                            { type: 'ai-settings-changed' }
+                        )
+                        this.plugin.aiService.updateConfig(this.plugin.settings.ai.provider)
+                        this.display()
+                    })
+            })
+
+        // API Key
+        new Setting(containerEl)
+            .setName('API key')
+            .setDesc(
+                this.plugin.settings.ai.provider.type === 'openrouter'
+                    ? 'Your OpenRouter API key (from openrouter.ai/keys)'
+                    : 'Your OpenAI API key (from platform.openai.com)'
+            )
+            .addText((text) => {
+                text.setPlaceholder('sk-...')
+                    .setValue(this.plugin.settings.ai.provider.apiKey)
+                    .onChange(async (value) => {
+                        await this.plugin.updateSettings(
+                            (draft) => {
+                                draft.ai.provider.apiKey = value
+                            },
+                            { type: 'ai-settings-changed' }
+                        )
+                        this.plugin.aiService.updateConfig(this.plugin.settings.ai.provider)
+                    })
+                text.inputEl.type = 'password'
+                text.inputEl.classList.add('lt-api-key-input')
+            })
+
+        // Model Selection
+        const providerType = this.plugin.settings.ai.provider.type
+        const models = AI_MODELS[providerType] ?? []
+
+        new Setting(containerEl)
+            .setName('Model')
+            .setDesc('Select or type a model identifier')
+            .addDropdown((dropdown) => {
+                const options: Record<string, string> = {}
+                for (const model of models) {
+                    options[model.id] = model.label
+                }
+                // Add current model if not in the list (custom model)
+                const currentModel = this.plugin.settings.ai.provider.model
+                if (currentModel && !options[currentModel]) {
+                    options[currentModel] = currentModel
+                }
+                dropdown
+                    .addOptions(options)
+                    .setValue(currentModel)
+                    .onChange(async (value) => {
+                        await this.plugin.updateSettings(
+                            (draft) => {
+                                draft.ai.provider.model = value
+                            },
+                            { type: 'ai-settings-changed' }
+                        )
+                        this.plugin.aiService.updateConfig(this.plugin.settings.ai.provider)
+                    })
+            })
+            .addText((text) => {
+                text.setPlaceholder('Custom model ID')
+                    .setValue('')
+                    .onChange(async (value) => {
+                        if (value.trim()) {
+                            await this.plugin.updateSettings(
+                                (draft) => {
+                                    draft.ai.provider.model = value.trim()
+                                },
+                                { type: 'ai-settings-changed' }
+                            )
+                            this.plugin.aiService.updateConfig(this.plugin.settings.ai.provider)
+                        }
+                    })
+                text.inputEl.classList.add('lt-custom-model-input')
+                text.inputEl.placeholder = 'Or type custom model ID'
+            })
+
+        // Custom base URL
+        new Setting(containerEl)
+            .setName('Custom base URL')
+            .setDesc('Override the API endpoint (leave empty for default)')
+            .addText((text) => {
+                text.setPlaceholder(
+                    providerType === 'openrouter'
+                        ? 'https://openrouter.ai/api/v1'
+                        : 'https://api.openai.com/v1'
+                )
+                    .setValue(this.plugin.settings.ai.provider.baseUrl)
+                    .onChange(async (value) => {
+                        await this.plugin.updateSettings(
+                            (draft) => {
+                                draft.ai.provider.baseUrl = value
+                            },
+                            { type: 'ai-settings-changed' }
+                        )
+                        this.plugin.aiService.updateConfig(this.plugin.settings.ai.provider)
+                    })
+            })
+
+        // Test Connection
+        new Setting(containerEl)
+            .setName('Connection')
+            .setDesc('Test your AI provider connection')
+            .addButton((button) => {
+                button
+                    .setButtonText('Test connection')
+                    .setIcon('refresh-cw')
+                    .onClick(async () => {
+                        try {
+                            button.setDisabled(true)
+                            button.setButtonText('Testing...')
+                            new Notice('Testing AI connection...')
+
+                            const result = await this.plugin.aiService.testConnection()
+
+                            if (result.success) {
+                                new Notice(`AI connection successful (${result.model})`)
+                            } else {
+                                new Notice(
+                                    `AI connection failed: ${result.error ?? 'Unknown error'}`
+                                )
+                            }
+                        } catch (error) {
+                            const msg = error instanceof Error ? error.message : 'Unknown error'
+                            new Notice(`AI connection error: ${msg}`)
+                        } finally {
+                            button.setDisabled(false)
+                            button.setButtonText('Test connection')
+                        }
+                    })
+            })
+
+        // Separator
+        containerEl.createEl('hr', { cls: 'lt-settings-separator' })
+
+        // Capture Analysis Settings
+        new Setting(containerEl).setName('Capture analysis').setHeading()
+
+        new Setting(containerEl)
+            .setName('Analyze after capture')
+            .setDesc(
+                'Automatically send captured fields to AI for analysis when you finish a capture session'
+            )
+            .addToggle((toggle) => {
+                toggle
+                    .setValue(this.plugin.settings.ai.analyzeAfterCapture)
+                    .onChange(async (value) => {
+                        await this.plugin.updateSettings(
+                            (draft) => {
+                                draft.ai.analyzeAfterCapture = value
+                            },
+                            { type: 'ai-settings-changed' }
+                        )
+                    })
+            })
+
+        new Setting(containerEl)
+            .setName('Capture analysis prompt')
+            .setDesc(
+                'Custom system prompt for capture analysis. Leave empty for the default prompt.'
+            )
+            .addTextArea((textarea) => {
+                textarea
+                    .setPlaceholder(
+                        'You are a life tracking analyst. Analyze the following data and provide insights...'
+                    )
+                    .setValue(this.plugin.settings.ai.captureAnalysisPrompt)
+                    .onChange(async (value) => {
+                        await this.plugin.updateSettings(
+                            (draft) => {
+                                draft.ai.captureAnalysisPrompt = value
+                            },
+                            { type: 'ai-settings-changed' }
+                        )
+                    })
+                textarea.inputEl.rows = 4
+                textarea.inputEl.classList.add('lt-ai-prompt-input')
+            })
+
+        // Separator
+        containerEl.createEl('hr', { cls: 'lt-settings-separator' })
+
+        // Weekly Summary Settings
+        new Setting(containerEl).setName('Weekly summary').setHeading()
+
+        new Setting(containerEl)
+            .setName('Filter tag')
+            .setDesc(
+                'Only include notes with this tag in weekly summaries (without #). Leave empty for all notes.'
+            )
+            .addText((text) => {
+                text.setPlaceholder('e.g., daily')
+                    .setValue(this.plugin.settings.ai.weeklySummary.filterTag)
+                    .onChange(async (value) => {
+                        await this.plugin.updateSettings(
+                            (draft) => {
+                                draft.ai.weeklySummary.filterTag = value
+                            },
+                            { type: 'ai-settings-changed' }
+                        )
+                    })
+            })
+
+        new Setting(containerEl)
+            .setName('Default date range')
+            .setDesc('Default time period for weekly summaries')
+            .addDropdown((dropdown) => {
+                const options: Record<string, string> = {}
+                for (const [key, label] of Object.entries(WEEKLY_SUMMARY_DATE_RANGE_LABELS)) {
+                    options[key] = label
+                }
+                dropdown
+                    .addOptions(options)
+                    .setValue(this.plugin.settings.ai.weeklySummary.defaultDateRange)
+                    .onChange(async (value) => {
+                        await this.plugin.updateSettings(
+                            (draft) => {
+                                draft.ai.weeklySummary.defaultDateRange =
+                                    value as WeeklySummaryDateRange
+                            },
+                            { type: 'ai-settings-changed' }
+                        )
+                    })
+            })
+
+        new Setting(containerEl)
+            .setName('Include CSV data')
+            .setDesc('Include raw CSV data in the AI prompt for detailed analysis')
+            .addToggle((toggle) => {
+                toggle
+                    .setValue(this.plugin.settings.ai.weeklySummary.includeCsvData)
+                    .onChange(async (value) => {
+                        await this.plugin.updateSettings(
+                            (draft) => {
+                                draft.ai.weeklySummary.includeCsvData = value
+                            },
+                            { type: 'ai-settings-changed' }
+                        )
+                    })
+            })
+
+        new Setting(containerEl)
+            .setName('Include properties')
+            .setDesc(
+                'Comma-separated list of property names to include. Leave empty to auto-include all numeric and boolean properties.'
+            )
+            .addTextArea((textarea) => {
+                textarea
+                    .setPlaceholder('sleep, mood, energy, exercise')
+                    .setValue(this.plugin.settings.ai.weeklySummary.includeProperties.join(', '))
+                    .onChange(async (value) => {
+                        await this.plugin.updateSettings(
+                            (draft) => {
+                                draft.ai.weeklySummary.includeProperties = value
+                                    .split(',')
+                                    .map((v) => v.trim())
+                                    .filter(Boolean)
+                            },
+                            { type: 'ai-settings-changed' }
+                        )
+                    })
+                textarea.inputEl.rows = 2
+            })
+
+        new Setting(containerEl)
+            .setName('Weekly summary prompt')
+            .setDesc('Custom system prompt for weekly summary. Leave empty for the default prompt.')
+            .addTextArea((textarea) => {
+                textarea
+                    .setPlaceholder(
+                        'You are a life tracking analyst. Analyze the weekly data and provide a summary with trends, patterns, and recommendations...'
+                    )
+                    .setValue(this.plugin.settings.ai.weeklySummaryPrompt)
+                    .onChange(async (value) => {
+                        await this.plugin.updateSettings(
+                            (draft) => {
+                                draft.ai.weeklySummaryPrompt = value
+                            },
+                            { type: 'ai-settings-changed' }
+                        )
+                    })
+                textarea.inputEl.rows = 4
+                textarea.inputEl.classList.add('lt-ai-prompt-input')
+            })
     }
 
     // ========================================

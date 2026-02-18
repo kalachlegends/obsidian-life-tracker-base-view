@@ -9,3 +9,19 @@ export { getBatchFilterModeLabel } from './batch-filter-mode.intf'
 export type { CaptureContext } from './capture-context.intf'
 export type { TickTickSettings } from './ticktick-settings.types'
 export { DEFAULT_TICKTICK_SETTINGS } from './ticktick-settings.types'
+export type {
+    AIProviderType,
+    AIProviderConfig,
+    AISettings,
+    WeeklySummarySettings,
+    WeeklySummaryDateRange,
+    AIAnalysisResult
+} from '../../../integrations/ai/types'
+export {
+    AI_PROVIDER_LABELS,
+    DEFAULT_AI_PROVIDER_CONFIG,
+    DEFAULT_WEEKLY_SUMMARY_SETTINGS,
+    DEFAULT_AI_SETTINGS,
+    AI_MODELS,
+    WEEKLY_SUMMARY_DATE_RANGE_LABELS
+} from '../../../integrations/ai/types'

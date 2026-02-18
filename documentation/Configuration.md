@@ -8,6 +8,7 @@ Stored in plugin data, applies to all views.
 | ---------------------- | ----------------------------- | ------- | ------------------------------------------------- |
 | `visualizationPresets` | PropertyVisualizationPreset[] | `[]`    | Auto-apply visualization by property name pattern |
 | `animationDuration`    | number                        | `3000`  | Chart animation duration (ms)                     |
+| `ai`                   | AISettings                    | (below) | AI integration configuration                      |
 
 ## Life Tracker View Options (Per-View)
 
@@ -82,3 +83,22 @@ Available via context menu: `0-1`, `0-5`, `1-5`, `0-10`, `1-10`, `0-100`, or aut
 ## Heatmap Color Schemes
 
 `green` (default), `blue`, `purple`, `orange`, `red`
+
+## AI Settings
+
+Configured in **Settings → Integrations → AI analysis**.
+
+| Setting                              | Type                         | Default         | Description                                     |
+| ------------------------------------ | ---------------------------- | --------------- | ----------------------------------------------- |
+| `ai.enabled`                         | boolean                      | `false`         | Enable AI integration                           |
+| `ai.provider.type`                   | `'openai' \| 'openrouter'`   | `'openai'`      | AI provider type                                |
+| `ai.provider.apiKey`                 | string                       | `''`            | API key for the provider                        |
+| `ai.provider.model`                  | string                       | `'gpt-4o-mini'` | Model identifier                                |
+| `ai.provider.baseUrl`                | string                       | `''`            | Custom API base URL (empty = provider default)  |
+| `ai.analyzeAfterCapture`             | boolean                      | `false`         | Auto-analyze captured fields after completion   |
+| `ai.captureAnalysisPrompt`           | string                       | `''`            | Custom system prompt for capture analysis       |
+| `ai.weeklySummaryPrompt`             | string                       | `''`            | Custom system prompt for weekly summary         |
+| `ai.weeklySummary.filterTag`         | string                       | `''`            | Tag to filter notes (without #, empty = all)    |
+| `ai.weeklySummary.defaultDateRange`  | `'this_week' \| 'last_week'` | `'this_week'`   | Default date range for weekly summaries         |
+| `ai.weeklySummary.includeCsvData`    | boolean                      | `true`          | Include raw CSV data in AI prompt               |
+| `ai.weeklySummary.includeProperties` | string[]                     | `[]`            | Property names to include (empty = auto-detect) |

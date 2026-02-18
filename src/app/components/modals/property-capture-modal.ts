@@ -12,10 +12,22 @@ import {
 import { FrontmatterService } from '../../services/frontmatter.service'
 import { PropertyRecognitionService } from '../../services/property-recognition.service'
 import { createPropertyEditor } from '../editing/property-editor'
-import { formatFileTitleWithWeekday } from '../../../utils'
+import { formatFileTitleWithWeekday, log } from '../../../utils'
+import { AIAnalysisModal } from './ai-analysis-modal'
 
 /** Debounce delay for auto-save in milliseconds */
 const AUTO_SAVE_DEBOUNCE_MS = 500
+
+/** Default system prompt for capture analysis */
+const DEFAULT_CAPTURE_ANALYSIS_PROMPT = `You are a personal life tracking analyst. The user just finished capturing their daily tracking data. Analyze the values provided and give brief, actionable insights.
+
+Guidelines:
+- Be concise (3-5 bullet points max)
+- Highlight anything that stands out (very high, very low, or unusual values)
+- If you notice patterns or correlations between fields, mention them
+- Offer one brief, encouraging or practical suggestion
+- Use a supportive but direct tone
+- Format your response in markdown`
 
 /**
  * Modal for capturing/editing property values in a carousel-style interface.
@@ -69,9 +81,9 @@ export class PropertyCaptureModal extends Modal {
         contentEl.empty()
         contentEl.addClass('lt-carousel-modal')
 
-        this.loadProperties()
+        const hasManualProperties = await this.loadPropertiesAndAutoRunScripts()
 
-        if (this.sortedDefinitions.length === 0) {
+        if (!hasManualProperties) {
             this.renderEmptyState()
             return
         }
@@ -128,6 +140,118 @@ export class PropertyCaptureModal extends Modal {
         this.currentPropertyIndex = 0
         const firstDef = this.sortedDefinitions[0]
         this.currentValue = firstDef ? this.savedValues[firstDef.name] : undefined
+    }
+
+    /**
+     * After loading properties for a file, auto-fetch TickTick data if the
+     * integration is enabled. Returns true if there are properties to show.
+     */
+    private async loadPropertiesAndAutoRunScripts(): Promise<boolean> {
+        this.loadProperties()
+
+        // Auto-fetch TickTick data if integration is enabled and authenticated
+        const tickTickEnabled = this.plugin.settings.ticktick.enabled
+        const tickTickToken = this.plugin.settings.ticktick.token
+
+        if (tickTickEnabled && tickTickToken) {
+            log('[Capture] TickTick integration enabled, auto-fetching data', 'debug')
+            await this.autoFetchTickTickData()
+            // Reload properties to reflect updated frontmatter values
+            this.loadProperties()
+        }
+
+        return this.sortedDefinitions.length > 0
+    }
+
+    /**
+     * Auto-fetch TickTick data for the current file's date.
+     * Runs automatically when TickTick integration is enabled and authenticated.
+     * Shows a loading indicator while fetching.
+     */
+    private async autoFetchTickTickData(): Promise<void> {
+        const file = this.getCurrentFile()
+        if (!file) return
+
+        log(`[Capture] Auto-fetching TickTick data for ${file.basename}`, 'debug')
+
+        // Show loading state in the modal
+        const { contentEl } = this
+        contentEl.empty()
+        const loadingEl = contentEl.createDiv({ cls: 'lt-carousel-container' })
+        const title = formatFileTitleWithWeekday(file.basename)
+        loadingEl.createDiv({
+            cls: 'lt-carousel-file-name',
+            text: title
+        })
+        const loadingCard = loadingEl.createDiv({ cls: 'lt-carousel-card' })
+        loadingCard.createDiv({
+            cls: 'lt-carousel-label',
+            text: 'Fetching TickTick data...'
+        })
+
+        try {
+            const { getTickTickDateRangeFromFilename } = await import('../../../utils/date.utils')
+            const { TickTickAPIService } =
+                await import('../../../integrations/ticktick/services/TickTickAPIService')
+
+            const dateRange = getTickTickDateRangeFromFilename(file.basename)
+
+            if (!dateRange) {
+                log(
+                    `[Capture] Could not parse date from filename: ${file.basename}, skipping TickTick fetch`,
+                    'debug'
+                )
+                return
+            }
+
+            const token = this.plugin.settings.ticktick.token
+            if (!token) {
+                log('[Capture] TickTick token missing, skipping fetch', 'warn')
+                return
+            }
+
+            log(
+                `[Capture] Fetching TickTick data for date range: ${dateRange.from} to ${dateRange.to}`,
+                'debug'
+            )
+
+            const apiService = new TickTickAPIService({ token })
+            const result = await apiService.parseTasksForDateRange(dateRange)
+
+            log(`[Capture] TickTick data received: ${JSON.stringify(result)}`, 'debug')
+
+            // Update saved values and frontmatter with all parsed data
+            const updates: Record<string, unknown> = {}
+            for (const [propName, propValue] of Object.entries(result)) {
+                this.savedValues[propName] = propValue
+                updates[propName] = propValue
+
+                const isFilled =
+                    propValue !== undefined && propValue !== null && String(propValue) !== ''
+                if (isFilled) {
+                    this.filledProperties.add(propName)
+                } else {
+                    this.filledProperties.delete(propName)
+                }
+            }
+
+            if (Object.keys(updates).length > 0) {
+                await this.frontmatterService.write(file, updates)
+                log(
+                    `[Capture] TickTick data saved to frontmatter: ${Object.keys(updates).join(', ')}`,
+                    'debug'
+                )
+                new Notice(
+                    `TickTick data saved: ${String(result['task_count_done'] ?? 0)} tasks, ${String(result['xp'] ?? 0)} XP`
+                )
+            }
+        } catch (error) {
+            log(`[Capture] TickTick auto-fetch error: ${String(error)}`, 'error')
+            console.error('[Capture] TickTick auto-fetch error:', error)
+            new Notice(
+                `TickTick fetch error: ${error instanceof Error ? error.message : 'Unknown error'}`
+            )
+        }
     }
 
     private getCurrentFile(): TFile | undefined {
@@ -385,14 +509,13 @@ export class PropertyCaptureModal extends Modal {
         const firstIncompleteIndex = this.findNextIncompleteFile(0, 1)
         if (firstIncompleteIndex !== -1) {
             this.currentFileIndex = firstIncompleteIndex
-            this.loadProperties()
-
-            if (this.sortedDefinitions.length === 0) {
-                this.renderEmptyState()
-                return
-            }
-
-            this.render()
+            void this.loadPropertiesAndAutoRunScripts().then((hasManual) => {
+                if (!hasManual) {
+                    this.renderEmptyState()
+                    return
+                }
+                this.render()
+            })
         }
     }
 
@@ -635,77 +758,6 @@ export class PropertyCaptureModal extends Modal {
 
         if (definition.script && definition.script.trim()) {
             try {
-                // Handle TickTickInput command
-                if (definition.script.trim() === 'TickTickInput') {
-                    // Use TickTick API to fetch and parse tasks based on filename date
-                    const { getTickTickDateRangeFromFilename } =
-                        await import('../../../utils/date.utils')
-                    const { TickTickAPIService } =
-                        await import('../../../integrations/ticktick/services/TickTickAPIService')
-
-                    const dateRange = getTickTickDateRangeFromFilename(file.basename)
-
-                    if (!dateRange) {
-                        new Notice('⚠️ Could not parse date from filename for TickTick API')
-                        return
-                    }
-
-                    new Notice(`📅 Fetching TickTick data for ${file.basename}...`)
-
-                    try {
-                        // Get token from existing TickTick integration settings
-                        const token = this.plugin.settings.ticktick.token
-                        if (!token) {
-                            new Notice(
-                                '⚠️ TickTick token not configured. Please login in settings.'
-                            )
-                            return
-                        }
-
-                        const apiService = new TickTickAPIService({
-                            token: token
-                        })
-
-                        const result = await apiService.parseTasksForDateRange(dateRange)
-
-                        // Update saved values and frontmatter with all parsed data
-                        const updates: Record<string, unknown> = {}
-                        for (const [propName, propValue] of Object.entries(result)) {
-                            this.savedValues[propName] = propValue
-                            updates[propName] = propValue
-
-                            const isFilled =
-                                propValue !== undefined &&
-                                propValue !== null &&
-                                String(propValue) !== ''
-                            if (isFilled) {
-                                this.filledProperties.add(propName)
-                            } else {
-                                this.filledProperties.delete(propName)
-                            }
-                        }
-
-                        if (Object.keys(updates).length > 0) {
-                            await this.frontmatterService.write(file, updates)
-                            this.renderProgress()
-                            new Notice(
-                                `✅ TickTick data saved: ${result['task_count_done'] || 0} tasks, ${result['xp'] || 0} XP`
-                            )
-                        }
-
-                        // Update current value if needed
-                        if (definition.name in updates) {
-                            this.currentValue = updates[definition.name]
-                        }
-                    } catch (error) {
-                        console.error('TickTick API Error:', error)
-                        new Notice(
-                            `❌ TickTick API Error: ${error instanceof Error ? error.message : 'Unknown error'}`
-                        )
-                    }
-                    return
-                }
-
                 // Create a safe context for script execution
                 const context = {
                     value: this.currentValue,
@@ -993,15 +1045,13 @@ export class PropertyCaptureModal extends Modal {
         }
 
         this.currentFileIndex = nextIndex
-        this.loadProperties()
-
-        // Check if new file has no applicable properties
-        if (this.sortedDefinitions.length === 0) {
-            this.renderEmptyState()
-            return
-        }
-
-        this.render()
+        void this.loadPropertiesAndAutoRunScripts().then((hasManual) => {
+            if (!hasManual) {
+                this.renderEmptyState()
+                return
+            }
+            this.render()
+        })
     }
 
     /**
@@ -1027,15 +1077,13 @@ export class PropertyCaptureModal extends Modal {
         }
 
         this.currentFileIndex = nextIndex
-        this.loadProperties()
-
-        // Check if new file has no applicable properties
-        if (this.sortedDefinitions.length === 0) {
-            this.renderEmptyState()
-            return
-        }
-
-        this.render()
+        void this.loadPropertiesAndAutoRunScripts().then((hasManual) => {
+            if (!hasManual) {
+                this.renderEmptyState()
+                return
+            }
+            this.render()
+        })
     }
 
     /**
@@ -1066,15 +1114,13 @@ export class PropertyCaptureModal extends Modal {
         }
 
         this.currentFileIndex = nextIndex
-        this.loadProperties()
-
-        // Check if new file has no applicable properties
-        if (this.sortedDefinitions.length === 0) {
-            this.renderEmptyState()
-            return
-        }
-
-        this.render()
+        void this.loadPropertiesAndAutoRunScripts().then((hasManual) => {
+            if (!hasManual) {
+                this.renderEmptyState()
+                return
+            }
+            this.render()
+        })
     }
 
     /**
@@ -1095,7 +1141,7 @@ export class PropertyCaptureModal extends Modal {
     }
 
     /**
-     * Handle done button click - show confetti and close
+     * Handle done button click - show confetti, trigger AI analysis, and close
      */
     private handleDone(): void {
         // Ensure any pending save completes
@@ -1116,10 +1162,57 @@ export class PropertyCaptureModal extends Modal {
 
         new Notice(message)
 
+        // Trigger AI analysis if enabled
+        const shouldAnalyze =
+            this.plugin.settings.ai.enabled && this.plugin.settings.ai.analyzeAfterCapture
+
+        if (shouldAnalyze) {
+            void this.triggerAIAnalysis()
+        }
+
         // Small delay to let confetti show before closing
         setTimeout(() => {
             this.close()
         }, 600)
+    }
+
+    /**
+     * Trigger AI analysis of the captured fields.
+     * Collects all saved values and sends them to the configured AI provider.
+     */
+    private async triggerAIAnalysis(): Promise<void> {
+        const file = this.getCurrentFile()
+        if (!file) return
+
+        // Build a data summary from saved values
+        const dataLines: string[] = []
+        dataLines.push(`Note: ${file.basename}`)
+        dataLines.push('')
+
+        for (const def of this.sortedDefinitions) {
+            const value = this.savedValues[def.name]
+            const displayName = def.displayName || def.name
+            const valueStr =
+                value === undefined || value === null || value === ''
+                    ? '(not set)'
+                    : Array.isArray(value)
+                      ? value.join(', ')
+                      : String(value)
+            dataLines.push(`- ${displayName}: ${valueStr}`)
+        }
+
+        const userMessage = dataLines.join('\n')
+
+        // Use custom prompt or default
+        const systemPrompt =
+            this.plugin.settings.ai.captureAnalysisPrompt.trim() || DEFAULT_CAPTURE_ANALYSIS_PROMPT
+
+        new Notice('Analyzing captured data with AI...')
+
+        const result = await this.plugin.aiService.analyze(systemPrompt, userMessage)
+
+        // Show result in modal
+        new AIAnalysisModal(this.plugin, result, `Analysis: ${file.basename}`).open()
     }
 
     private showConfetti(): void {

@@ -4,6 +4,8 @@ import type { PropertyDefinition } from '../property/property-definition.types'
 import type { ChartColorScheme } from '../../../utils/color.utils'
 import type { TickTickSettings } from './ticktick-settings.types'
 import { DEFAULT_TICKTICK_SETTINGS } from './ticktick-settings.types'
+import type { AISettings } from '../../../integrations/ai/types'
+import { DEFAULT_AI_SETTINGS } from '../../../integrations/ai/types'
 
 /**
  * Global preset for a property name pattern
@@ -54,6 +56,12 @@ export interface PluginSettings {
      * Configure connection to TickTick for task synchronization
      */
     ticktick: TickTickSettings
+
+    /**
+     * AI integration settings
+     * Configure AI providers for data analysis and insights
+     */
+    ai: AISettings
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
@@ -61,5 +69,6 @@ export const DEFAULT_SETTINGS: PluginSettings = {
     animationDuration: 3000,
     propertyDefinitions: [],
     showConfettiOnCapture: true,
-    ticktick: DEFAULT_TICKTICK_SETTINGS
+    ticktick: DEFAULT_TICKTICK_SETTINGS,
+    ai: DEFAULT_AI_SETTINGS
 }

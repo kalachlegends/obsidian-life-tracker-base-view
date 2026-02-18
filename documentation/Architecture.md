@@ -73,16 +73,27 @@ src/
     value-extractors.ts      # Extract values from Obsidian Value types
     log.ts                   # Debug logging
   styles.src.css             # Tailwind source (compiled to styles.css)
+  integrations/
+    ai/
+      types/
+        ai-settings.types.ts   # AI provider, settings, result types
+        index.ts               # Type re-exports
+      services/
+        AIService.ts           # OpenAI/OpenRouter compatible HTTP client
+        index.ts               # Service re-exports
+      index.ts                 # Integration re-exports
+    ticktick/                  # TickTick task sync integration
 ```
 
 ## Key Components
 
 ### Plugin (`plugin.ts`)
 
-- Registers three BasesViews: life-tracker, life-tracker-table, life-tracker-grid
+- Registers BasesViews: life-tracker, life-tracker-grid
 - Manages immutable settings with immer
 - Notifies views on settings changes
-- Registers capture command
+- Registers commands (capture, weekly summary)
+- Initializes integration services (TickTick, AI)
 
 ### Base Views
 
@@ -132,6 +143,12 @@ All editors:
 - **FrontmatterService**: Read/write frontmatter, validate against property definitions
 - **ColumnConfigService**: Manages per-property visualization configs (persisted in view config)
 - **MaximizeStateService**: Handles card maximize/minimize state, escape key handler
+- **AIService**: OpenAI/OpenRouter compatible chat completions client for data analysis
+
+### Commands
+
+- **Capture properties** (`capture-properties`): Carousel-style property capture with batch mode
+- **Generate weekly summary** (`weekly-summary`): Collects weekly data by tag/date range, computes averages, generates CSV, sends to AI for analysis
 
 ### Visualizations
 

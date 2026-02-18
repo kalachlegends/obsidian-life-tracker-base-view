@@ -8,4 +8,5 @@ export type SettingsChangeInfo =
     | { type: 'animation-duration-changed' }
     | { type: 'property-definitions-changed' }
     | { type: 'confetti-setting-changed' }
+    | { type: 'ai-settings-changed' }
     | { type: 'full' } // Generic change requiring full refresh

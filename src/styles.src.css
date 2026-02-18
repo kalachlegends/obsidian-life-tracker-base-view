@@ -3376,3 +3376,149 @@
         @apply w-auto;
     }
 }
+
+/* ========================================
+   AI ANALYSIS MODAL
+   ======================================== */
+
+.lt-ai-analysis-modal {
+    @apply p-0 overflow-hidden;
+    max-width: min(600px, calc(100vw - 32px));
+    min-width: min(480px, calc(100vw - 32px));
+}
+
+.lt-ai-analysis-modal .modal-content {
+    @apply p-6 overflow-hidden flex flex-col;
+    max-height: min(600px, calc(100vh - 120px));
+}
+
+.lt-ai-analysis-title {
+    @apply text-lg font-bold mb-3;
+    color: var(--text-normal);
+}
+
+.lt-ai-analysis-info {
+    @apply flex items-center gap-3 mb-4 text-xs;
+    color: var(--text-muted);
+}
+
+.lt-ai-analysis-provider {
+    @apply px-2 py-0.5 rounded;
+    background-color: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+}
+
+.lt-ai-analysis-tokens {
+    @apply px-2 py-0.5 rounded;
+    background-color: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+}
+
+.lt-ai-analysis-content {
+    @apply flex-1 overflow-y-auto mb-4 p-4 rounded-lg;
+    background-color: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+}
+
+.lt-ai-analysis-content p {
+    @apply mb-2;
+}
+
+.lt-ai-analysis-content ul,
+.lt-ai-analysis-content ol {
+    @apply mb-2 pl-5;
+}
+
+.lt-ai-analysis-content h1,
+.lt-ai-analysis-content h2,
+.lt-ai-analysis-content h3,
+.lt-ai-analysis-content h4 {
+    @apply mb-2 mt-3;
+}
+
+.lt-ai-analysis-actions {
+    @apply flex justify-end gap-3;
+}
+
+.lt-ai-analysis-btn {
+    @apply px-4 py-2 rounded font-medium text-sm;
+    @apply transition-all duration-150 cursor-pointer;
+    background-color: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    color: var(--text-normal);
+}
+
+.lt-ai-analysis-btn:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+.lt-ai-analysis-btn--primary {
+    background-color: var(--interactive-accent);
+    border-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+.lt-ai-analysis-btn--primary:hover {
+    filter: brightness(1.1);
+}
+
+.lt-ai-analysis-error {
+    @apply text-center py-6;
+}
+
+.lt-ai-analysis-error-title {
+    @apply text-lg font-bold mb-2;
+    color: var(--text-error);
+}
+
+.lt-ai-analysis-error-message {
+    @apply text-sm mb-6;
+    color: var(--text-muted);
+}
+
+/* Settings-specific AI styles */
+.lt-api-key-input {
+    @apply w-full;
+    min-width: 250px;
+}
+
+.lt-custom-model-input {
+    @apply w-full;
+    min-width: 150px;
+}
+
+.lt-ai-prompt-input {
+    @apply w-full;
+    min-width: 300px;
+}
+
+/* Responsive AI modal */
+@media (max-width: 520px) {
+    .lt-ai-analysis-modal {
+        @apply fixed inset-0 min-w-full max-w-full min-h-screen max-h-screen rounded-none m-0;
+    }
+
+    .lt-ai-analysis-modal .modal-content {
+        @apply p-4 max-h-full;
+    }
+
+    .lt-ai-analysis-title {
+        @apply text-base mb-2;
+    }
+
+    .lt-ai-analysis-info {
+        @apply flex-wrap gap-2 mb-3;
+    }
+
+    .lt-ai-analysis-content {
+        @apply p-3 mb-3;
+    }
+
+    .lt-ai-analysis-actions {
+        @apply flex-col gap-2;
+    }
+
+    .lt-ai-analysis-btn {
+        @apply w-full text-center py-3;
+    }
+}

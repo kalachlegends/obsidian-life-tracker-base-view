@@ -20,6 +20,7 @@ import { TickTickAPI } from '../integrations/ticktick/api/TickTickAPI'
 import { TickTickAuthService } from '../integrations/ticktick/services/TickTickAuthService'
 import { TickTickSyncService } from '../integrations/ticktick/services/TickTickSyncService'
 import { TickTickToManualConverter } from '../integrations/ticktick/services/TickTickToManualConverter'
+import { AIService } from '../integrations/ai/services/AIService'
 
 export class LifeTrackerPlugin extends Plugin {
     /**
@@ -58,6 +59,11 @@ export class LifeTrackerPlugin extends Plugin {
     tickTickConverter!: TickTickToManualConverter
 
     /**
+     * AI service for LLM-based analysis
+     */
+    aiService!: AIService
+
+    /**
      * Register a file provider as active (called when view becomes visible)
      */
     setActiveFileProvider(provider: FileProvider | null): void {
@@ -89,6 +95,9 @@ export class LifeTrackerPlugin extends Plugin {
 
         // Initialize TickTick services
         this.initializeTickTickServices()
+
+        // Initialize AI service
+        this.aiService = new AIService(this.settings.ai.provider)
 
         // Register the Life Tracker Base View
         const registered = this.registerBasesView(LIFE_TRACKER_VIEW_TYPE, {
@@ -195,6 +204,27 @@ export class LifeTrackerPlugin extends Plugin {
                 }
                 // Never persist password — clear any previously stored value
                 draft.ticktick.password = ''
+            }
+
+            // Load AI settings
+            if (loadedSettings.ai) {
+                draft.ai = {
+                    ...draft.ai,
+                    ...loadedSettings.ai
+                }
+                // Ensure nested objects are properly merged
+                if (loadedSettings.ai.provider) {
+                    draft.ai.provider = {
+                        ...draft.ai.provider,
+                        ...loadedSettings.ai.provider
+                    }
+                }
+                if (loadedSettings.ai.weeklySummary) {
+                    draft.ai.weeklySummary = {
+                        ...draft.ai.weeklySummary,
+                        ...loadedSettings.ai.weeklySummary
+                    }
+                }
             }
         })
 
