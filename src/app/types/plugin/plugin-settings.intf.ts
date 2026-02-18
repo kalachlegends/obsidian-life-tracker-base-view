@@ -62,6 +62,12 @@ export interface PluginSettings {
      * Configure AI providers for data analysis and insights
      */
     ai: AISettings
+
+    /**
+     * Frontmatter property name used for storing quick thoughts.
+     * The "Capture thought" command appends entries to this list property.
+     */
+    thoughtsPropertyName: string
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
@@ -70,5 +76,6 @@ export const DEFAULT_SETTINGS: PluginSettings = {
     propertyDefinitions: [],
     showConfettiOnCapture: true,
     ticktick: DEFAULT_TICKTICK_SETTINGS,
-    ai: DEFAULT_AI_SETTINGS
+    ai: DEFAULT_AI_SETTINGS,
+    thoughtsPropertyName: 'thoughts'
 }

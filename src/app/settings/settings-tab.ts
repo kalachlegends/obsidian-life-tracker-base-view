@@ -126,6 +126,22 @@ export class LifeTrackerPluginSettingTab extends PluginSettingTab {
                     })
             })
 
+        // Thoughts property name
+        new Setting(containerEl)
+            .setName('Thoughts property name')
+            .setDesc(
+                'Frontmatter property used by the "Capture thought" command to store quick thoughts as a list.'
+            )
+            .addText((text) => {
+                text.setPlaceholder('thoughts')
+                    .setValue(this.plugin.settings.thoughtsPropertyName)
+                    .onChange(async (value) => {
+                        await this.plugin.updateSettings((draft) => {
+                            draft.thoughtsPropertyName = value.trim() || 'thoughts'
+                        })
+                    })
+            })
+
         // Separator
         containerEl.createEl('hr', { cls: 'lt-settings-separator' })
 

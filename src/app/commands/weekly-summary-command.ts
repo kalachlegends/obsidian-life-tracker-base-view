@@ -1,4 +1,4 @@
-import { Notice, type TFile } from 'obsidian'
+import { getAllTags, Notice, type TFile } from 'obsidian'
 import type { LifeTrackerPlugin } from '../plugin'
 import { FrontmatterService } from '../services/frontmatter.service'
 import { parseDateFromFilename, startOfWeek, formatDateISO } from '../../utils/date.utils'
@@ -112,6 +112,14 @@ async function executeWeeklySummary(plugin: LifeTrackerPlugin): Promise<void> {
     for (const file of allFiles) {
         // Filter by tag if configured
         if (filterTag && !fileHasTag(plugin, file, filterTag)) {
+            if (skippedByTag < 3) {
+                const cache = plugin.app.metadataCache.getFileCache(file)
+                const fileTags = cache ? getAllTags(cache) : null
+                log(
+                    `[WeeklySummary] Tag filter skipped "${file.basename}": file tags=${JSON.stringify(fileTags)}, looking for="${filterTag}"`,
+                    'debug'
+                )
+            }
             skippedByTag++
             continue
         }
@@ -274,29 +282,20 @@ function getWeeklySummaryDateRange(plugin: LifeTrackerPlugin): { start: Date; en
 }
 
 /**
- * Check if a file has a specific tag in its frontmatter
+ * Check if a file has a specific tag (searches frontmatter tags AND inline tags).
+ * Uses Obsidian's getAllTags() which returns normalized tags with '#' prefix.
  */
 function fileHasTag(plugin: LifeTrackerPlugin, file: TFile, tag: string): boolean {
     const cache = plugin.app.metadataCache.getFileCache(file)
-    if (!cache?.frontmatter) return false
+    if (!cache) return false
 
-    // Check frontmatter tags field
-    const tags = cache.frontmatter['tags']
+    // getAllTags returns all tags (frontmatter + inline) normalized with '#' prefix
+    const allTags = getAllTags(cache)
+    if (!allTags || allTags.length === 0) return false
 
-    if (Array.isArray(tags)) {
-        const normalizedTag = tag.toLowerCase().replace(/^#/, '')
-        return tags.some(
-            (t: unknown) =>
-                typeof t === 'string' && t.toLowerCase().replace(/^#/, '') === normalizedTag
-        )
-    }
+    const normalizedTag = '#' + tag.toLowerCase().replace(/^#/, '')
 
-    if (typeof tags === 'string') {
-        const normalizedTag = tag.toLowerCase().replace(/^#/, '')
-        return tags.split(/[,\s]+/).some((t) => t.toLowerCase().replace(/^#/, '') === normalizedTag)
-    }
-
-    return false
+    return allTags.some((t) => t.toLowerCase() === normalizedTag)
 }
 
 /**

@@ -206,6 +206,11 @@ export class LifeTrackerPlugin extends Plugin {
                 draft.ticktick.password = ''
             }
 
+            // Load thoughts property name
+            if (typeof loadedSettings.thoughtsPropertyName === 'string') {
+                draft.thoughtsPropertyName = loadedSettings.thoughtsPropertyName
+            }
+
             // Load AI settings
             if (loadedSettings.ai) {
                 draft.ai = {

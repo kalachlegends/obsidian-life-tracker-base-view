@@ -4,11 +4,12 @@
 
 Stored in plugin data, applies to all views.
 
-| Setting                | Type                          | Default | Description                                       |
-| ---------------------- | ----------------------------- | ------- | ------------------------------------------------- |
-| `visualizationPresets` | PropertyVisualizationPreset[] | `[]`    | Auto-apply visualization by property name pattern |
-| `animationDuration`    | number                        | `3000`  | Chart animation duration (ms)                     |
-| `ai`                   | AISettings                    | (below) | AI integration configuration                      |
+| Setting                | Type                          | Default    | Description                                       |
+| ---------------------- | ----------------------------- | ---------- | ------------------------------------------------- |
+| `visualizationPresets` | PropertyVisualizationPreset[] | `[]`       | Auto-apply visualization by property name pattern |
+| `animationDuration`    | number                        | `3000`     | Chart animation duration (ms)                     |
+| `ai`                   | AISettings                    | (below)    | AI integration configuration                      |
+| `thoughtsPropertyName` | string                        | `thoughts` | Frontmatter property for quick thought capture    |
 
 ## Life Tracker View Options (Per-View)
 

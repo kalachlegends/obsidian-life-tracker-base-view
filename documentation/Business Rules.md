@@ -121,3 +121,10 @@ When the "Capture properties" command is invoked from a custom base view (Life T
 - The weekly summary date range defaults to "this week" (Monday-Sunday, ISO week). Users can change to "last week" in settings.
 - Weekly summary tag filter is case-insensitive, matches frontmatter tags without `#` prefix.
 - If AI is disabled or unconfigured, capture completes normally without AI analysis.
+
+## Thoughts Capture
+
+- Thoughts are stored as a frontmatter list property (configurable name, default: `thoughts`).
+- The "Capture thought" command appends to the list; each entry is a string.
+- Removing all thoughts clears the property from frontmatter.
+- The property name is configured in Settings -> Life Tracker -> Property definitions tab.

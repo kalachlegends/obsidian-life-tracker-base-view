@@ -2830,6 +2830,382 @@
 }
 
 /* ========================================
+   DAILY NOTE MODAL (All Fields Form)
+   ======================================== */
+
+.lt-daily-modal {
+    @apply p-0 overflow-hidden;
+    max-width: min(560px, calc(100vw - 32px));
+    min-width: min(420px, calc(100vw - 32px));
+}
+
+.lt-daily-modal .modal-content {
+    @apply p-0 overflow-y-auto;
+    max-height: 80vh;
+}
+
+.lt-daily-container {
+    @apply flex flex-col p-8;
+}
+
+.lt-daily-title {
+    @apply text-xl font-bold text-center mb-2 tracking-tight;
+    color: var(--text-normal);
+}
+
+.lt-daily-subtitle {
+    @apply text-sm text-center mb-6;
+    color: var(--text-muted);
+}
+
+.lt-daily-fields {
+    @apply flex flex-col gap-5;
+}
+
+.lt-daily-field {
+    @apply rounded-lg p-4 border;
+    background-color: var(--background-secondary);
+    border-color: var(--background-modifier-border);
+}
+
+.lt-daily-field-label {
+    @apply flex items-center gap-2 mb-1;
+}
+
+.lt-daily-field-name {
+    @apply text-sm font-semibold;
+    color: var(--text-normal);
+}
+
+.lt-daily-field-required {
+    @apply px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide text-[9px];
+    background-color: rgba(255, 100, 100, 0.12);
+    color: var(--text-error);
+}
+
+.lt-daily-field-description {
+    @apply text-xs mb-2 leading-relaxed;
+    color: var(--text-muted);
+}
+
+.lt-daily-field-editor {
+    @apply mt-2;
+}
+
+.lt-daily-field-editor .lt-editor-input {
+    @apply px-3 py-2 text-sm rounded-md border transition-all duration-150;
+    background-color: var(--background-primary);
+    border-color: var(--background-modifier-border);
+}
+
+.lt-daily-field-editor .lt-editor-input:focus {
+    border-color: var(--interactive-accent);
+    box-shadow: 0 0 0 2px rgba(var(--interactive-accent-rgb), 0.1);
+}
+
+.lt-daily-field-editor .lt-editor-select {
+    @apply px-3 py-2 text-sm rounded-md border transition-all duration-150;
+    background-color: var(--background-primary);
+    border-color: var(--background-modifier-border);
+}
+
+.lt-daily-field-editor .lt-editor-select:focus {
+    border-color: var(--interactive-accent);
+}
+
+.lt-daily-field-editor .lt-editor-number-wrapper {
+    @apply flex items-center gap-3;
+}
+
+.lt-daily-field-editor .lt-editor-slider {
+    @apply h-3 rounded-full cursor-pointer appearance-none;
+    flex: 3;
+    background: linear-gradient(
+        to bottom,
+        transparent calc(50% - 2px),
+        var(--background-modifier-border) calc(50% - 2px),
+        var(--background-modifier-border) calc(50% + 2px),
+        transparent calc(50% + 2px)
+    );
+}
+
+.lt-daily-field-editor .lt-editor-slider::-webkit-slider-thumb {
+    @apply w-3.5 h-3.5 rounded-full cursor-pointer appearance-none;
+    background-color: var(--interactive-accent);
+}
+
+.lt-daily-field-editor .lt-editor-slider::-moz-range-thumb {
+    @apply w-3.5 h-3.5 rounded-full cursor-pointer border-0;
+    background-color: var(--interactive-accent);
+}
+
+.lt-daily-field-editor .lt-editor-input--number {
+    @apply text-center py-2 px-2 text-sm;
+    flex: 1;
+    min-width: 50px;
+}
+
+/* Input + "Use default" button wrapper */
+.lt-daily-input-with-default {
+    @apply flex items-stretch rounded-md border transition-all duration-150;
+    background-color: var(--background-primary);
+    border-color: var(--background-modifier-border);
+    overflow: hidden;
+}
+
+.lt-daily-input-with-default:focus-within {
+    border-color: var(--interactive-accent);
+}
+
+.lt-daily-input-with-default .lt-editor-input {
+    @apply border-0 rounded-none flex-1;
+    background-color: transparent;
+    box-shadow: none;
+    outline: none;
+}
+
+.lt-daily-input-with-default .lt-editor-input:focus {
+    border-color: transparent;
+    box-shadow: none;
+}
+
+.lt-daily-input-with-default .lt-editor-select {
+    @apply border-0 rounded-none flex-1;
+    background-color: transparent;
+    box-shadow: none;
+    outline: none;
+}
+
+.lt-daily-default-btn {
+    @apply px-3 py-2 cursor-pointer whitespace-nowrap;
+    @apply transition-all duration-150 flex-shrink-0;
+    @apply text-xs font-medium;
+    background-color: transparent;
+    color: var(--text-muted);
+    border: none;
+    border-left: 1px solid var(--background-modifier-border);
+    opacity: 0.7;
+}
+
+.lt-daily-default-btn:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-accent);
+    opacity: 1;
+}
+
+/* Empty state */
+.lt-daily-empty {
+    @apply flex flex-col items-center justify-center py-12 px-8 text-center;
+}
+
+.lt-daily-empty-icon {
+    @apply text-5xl mb-4;
+}
+
+.lt-daily-empty-title {
+    @apply text-lg font-bold mb-2;
+    color: var(--text-normal);
+}
+
+.lt-daily-empty-text {
+    @apply text-sm mb-6 max-w-sm leading-relaxed;
+    color: var(--text-muted);
+}
+
+.lt-daily-btn {
+    @apply px-5 py-2.5 rounded-lg font-semibold cursor-pointer text-sm;
+    @apply transition-all duration-150 border;
+    border-color: var(--background-modifier-border);
+}
+
+.lt-daily-btn--secondary {
+    background-color: var(--background-secondary);
+    color: var(--text-muted);
+}
+
+.lt-daily-btn--secondary:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+/* Mobile adjustments */
+@media (max-width: 480px) {
+    .lt-daily-modal {
+        @apply fixed inset-0 min-w-0 max-w-none rounded-none z-[1000];
+        width: 100vw !important;
+        height: 100vh !important;
+        max-height: 100vh !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        background-color: var(--background-primary) !important;
+    }
+
+    .lt-daily-modal .modal-content {
+        @apply h-full w-full overflow-y-auto p-0;
+        max-height: 100vh;
+    }
+
+    .lt-daily-container {
+        @apply p-4;
+    }
+
+    .lt-daily-title {
+        @apply text-lg;
+    }
+
+    .lt-daily-field {
+        @apply p-3;
+    }
+}
+
+/* ========================================
+   THOUGHTS MODAL (Quick Thought Capture)
+   ======================================== */
+
+.lt-thoughts-modal {
+    @apply p-0 overflow-hidden;
+    max-width: min(520px, calc(100vw - 32px));
+    min-width: min(400px, calc(100vw - 32px));
+}
+
+.lt-thoughts-modal .modal-content {
+    @apply p-0 overflow-y-auto;
+    max-height: 80vh;
+}
+
+.lt-thoughts-container {
+    @apply flex flex-col p-8;
+}
+
+.lt-thoughts-title {
+    @apply text-xl font-bold text-center mb-1 tracking-tight;
+    color: var(--text-normal);
+}
+
+.lt-thoughts-property-hint {
+    @apply text-xs text-center mb-5;
+    color: var(--text-faint);
+}
+
+/* Existing thoughts list */
+.lt-thoughts-list {
+    @apply flex flex-col gap-2 mb-5;
+}
+
+.lt-thoughts-empty {
+    @apply text-sm text-center py-6;
+    color: var(--text-muted);
+}
+
+.lt-thoughts-item {
+    @apply flex items-start gap-2 rounded-lg p-3 border transition-all duration-150;
+    background-color: var(--background-secondary);
+    border-color: var(--background-modifier-border);
+}
+
+.lt-thoughts-item:hover {
+    border-color: var(--text-muted);
+}
+
+.lt-thoughts-item-index {
+    @apply flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold;
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+.lt-thoughts-item-text {
+    @apply flex-1 text-sm leading-relaxed;
+    color: var(--text-normal);
+    word-break: break-word;
+}
+
+.lt-thoughts-item-delete {
+    @apply flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-full cursor-pointer;
+    @apply transition-all duration-150 text-sm leading-none;
+    background-color: transparent;
+    color: var(--text-muted);
+    border: none;
+    opacity: 0.5;
+}
+
+.lt-thoughts-item-delete:hover {
+    background-color: rgba(255, 100, 100, 0.15);
+    color: var(--text-error);
+    opacity: 1;
+}
+
+/* Input area */
+.lt-thoughts-input-area {
+    @apply flex flex-col gap-2;
+}
+
+.lt-thoughts-textarea {
+    @apply w-full px-4 py-3 text-sm rounded-lg border-2 transition-all duration-150 resize-y;
+    background-color: var(--background-primary);
+    border-color: var(--background-modifier-border);
+    color: var(--text-normal);
+    min-height: 80px;
+    font-family: inherit;
+    line-height: 1.6;
+}
+
+.lt-thoughts-textarea:focus {
+    border-color: var(--interactive-accent);
+    box-shadow: 0 0 0 3px rgba(var(--interactive-accent-rgb), 0.1);
+    outline: none;
+}
+
+.lt-thoughts-textarea::placeholder {
+    color: var(--text-faint);
+}
+
+.lt-thoughts-add-btn {
+    @apply px-5 py-2.5 rounded-lg font-semibold cursor-pointer text-sm;
+    @apply transition-all duration-150 self-end;
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border: none;
+}
+
+.lt-thoughts-add-btn:hover {
+    @apply scale-[1.02];
+    background-color: var(--interactive-accent-hover, var(--interactive-accent));
+}
+
+.lt-thoughts-hint {
+    @apply text-xs self-end;
+    color: var(--text-faint);
+}
+
+/* Mobile adjustments */
+@media (max-width: 480px) {
+    .lt-thoughts-modal {
+        @apply fixed inset-0 min-w-0 max-w-none rounded-none z-[1000];
+        width: 100vw !important;
+        height: 100vh !important;
+        max-height: 100vh !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        background-color: var(--background-primary) !important;
+    }
+
+    .lt-thoughts-modal .modal-content {
+        @apply h-full w-full overflow-y-auto p-0;
+        max-height: 100vh;
+    }
+
+    .lt-thoughts-container {
+        @apply p-4;
+    }
+
+    .lt-thoughts-title {
+        @apply text-lg;
+    }
+}
+
+/* ========================================
    PROPERTY SELECTION MODAL (Overlay)
    ======================================== */
 

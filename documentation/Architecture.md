@@ -24,7 +24,9 @@ src/
       date-anchor.types.ts         # Date anchor types
     commands/
       index.ts                     # Command registration
-      capture-command.ts           # Property capture command
+      capture-command.ts           # Property capture command (carousel)
+      daily-capture-command.ts     # Daily capture command (all fields)
+      thought-capture-command.ts   # Thought capture command
     services/
       date-anchor.service.ts       # Extract dates from entries (filename, properties)
       data-aggregation.service.ts  # Aggregate data for visualizations
@@ -60,7 +62,9 @@ src/
         validation.utils.ts        # Validation functions
         dirty-state.service.ts     # Track unsaved changes
       modals/
-        property-capture-modal.ts  # Capture/edit modal
+        property-capture-modal.ts  # Carousel-style capture modal (one field at a time)
+        daily-note-modal.ts        # Form-style modal (all fields at once)
+        thoughts-modal.ts          # Quick thought capture modal
       visualizations/
         base-visualization.ts      # Abstract base class
         heatmap/                   # GitHub-style heatmap
@@ -148,6 +152,8 @@ All editors:
 ### Commands
 
 - **Capture properties** (`capture-properties`): Carousel-style property capture with batch mode
+- **Daily capture** (`daily-capture`): Form-style modal showing all fields at once for the active note
+- **Capture thought** (`capture-thought`): Dedicated modal for quick thought capture, stores as list in frontmatter
 - **Generate weekly summary** (`weekly-summary`): Collects weekly data by tag/date range, computes averages, generates CSV, sends to AI for analysis
 
 ### Visualizations
