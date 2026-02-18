@@ -6,6 +6,8 @@ import type { TickTickSettings } from './ticktick-settings.types'
 import { DEFAULT_TICKTICK_SETTINGS } from './ticktick-settings.types'
 import type { AISettings } from '../../../integrations/ai/types'
 import { DEFAULT_AI_SETTINGS } from '../../../integrations/ai/types'
+import type { HCGatewaySettings } from '../../../integrations/hcgateway/types'
+import { DEFAULT_HCGATEWAY_SETTINGS } from '../../../integrations/hcgateway/types'
 
 /**
  * Global preset for a property name pattern
@@ -64,6 +66,12 @@ export interface PluginSettings {
     ai: AISettings
 
     /**
+     * HCGateway integration settings
+     * Configure connection to HCGateway for Android Health Connect data
+     */
+    hcgateway: HCGatewaySettings
+
+    /**
      * Frontmatter property name used for storing quick thoughts.
      * The "Capture thought" command appends entries to this list property.
      */
@@ -77,5 +85,6 @@ export const DEFAULT_SETTINGS: PluginSettings = {
     showConfettiOnCapture: true,
     ticktick: DEFAULT_TICKTICK_SETTINGS,
     ai: DEFAULT_AI_SETTINGS,
+    hcgateway: DEFAULT_HCGATEWAY_SETTINGS,
     thoughtsPropertyName: 'thoughts'
 }

@@ -25,3 +25,10 @@ export {
     AI_MODELS,
     WEEKLY_SUMMARY_DATE_RANGE_LABELS
 } from '../../../integrations/ai/types'
+export type { HCGatewaySettings, HCGatewayDataType } from '../../../integrations/hcgateway/types'
+export {
+    DEFAULT_HCGATEWAY_SETTINGS,
+    HCGATEWAY_DATA_TYPES,
+    HCGATEWAY_DATA_TYPE_LABELS,
+    HCGATEWAY_DATA_TYPE_CATEGORIES
+} from '../../../integrations/hcgateway/types'

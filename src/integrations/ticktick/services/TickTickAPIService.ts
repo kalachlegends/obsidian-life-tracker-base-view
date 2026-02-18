@@ -306,9 +306,15 @@ export class TickTickAPIService {
         }
 
         // Focus distribution — each category as focus_dist_<name>
+        // Skip metadata keys (projectDurations, tagDurations, taskDurations) that
+        // contain nested objects, not numeric seconds.
+        const DIST_SKIP_KEYS = new Set(['projectDurations', 'tagDurations', 'taskDurations'])
         for (const [category, seconds] of Object.entries(focusDistribution)) {
+            if (DIST_SKIP_KEYS.has(category)) continue
+            const numSeconds = Number(seconds)
+            if (isNaN(numSeconds)) continue
             const key = `focus_dist_${category.toLowerCase().replace(/\s+/g, '_')}`
-            result[key] = Math.round(Number(seconds) / 60)
+            result[key] = Math.round(numSeconds / 60)
         }
 
         // Add input reference for debugging
