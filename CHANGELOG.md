@@ -1,3 +1,20 @@
+## [1.2.7](https://github.com/dsebastien/obsidian-life-tracker-base-view/compare/1.2.5...1.2.7) (2026-02-18)
+
+### Features
+
+* add daily capture modal, thoughts modal, and fix weekly summary tag filter ([8540e25](https://github.com/dsebastien/obsidian-life-tracker-base-view/commit/8540e25c01fa89919eda585006c31616abdf19df))
+* add focus_data, habit_data and task date ranges ([a24419d](https://github.com/dsebastien/obsidian-life-tracker-base-view/commit/a24419de2f1c9cd97088e8bb755110c48e780171))
+* auto-fetch TickTick on capture, debug logging for weekly summary ([7769483](https://github.com/dsebastien/obsidian-life-tracker-base-view/commit/776948333c27d70f6e09d0808a26980e6b36a57c))
+* daily AI REPI ([8347b4a](https://github.com/dsebastien/obsidian-life-tracker-base-view/commit/8347b4ae0b3aff6917203bddbc814d535bc1ec96))
+* read all frontmatter data for AI analysis ([92361ab](https://github.com/dsebastien/obsidian-life-tracker-base-view/commit/92361ab1b6ca5a01e8caa5265b66636caba87e6d))
+* src ([83afc18](https://github.com/dsebastien/obsidian-life-tracker-base-view/commit/83afc183c554142c95a028b226345111f1c61975))
+* wire HCGateway health data integration into plugin lifecycle, capture, and settings ([b4d868a](https://github.com/dsebastien/obsidian-life-tracker-base-view/commit/b4d868ae74e6e7000594cd8ae7b027720c5f9650))
+
+### Bug Fixes
+
+* fix ([a330e12](https://github.com/dsebastien/obsidian-life-tracker-base-view/commit/a330e12379c00c8c7570ed10d2e79fc09f1238a8))
+* flatten focus/habit data to top-level YAML keys, fix undone tasks ([085d854](https://github.com/dsebastien/obsidian-life-tracker-base-view/commit/085d854fb75cf6c1ad434996f1464d57112fa7e1))
+* skip TickTick focus distribution metadata keys (projectDurations, tagDurations, taskDurations) ([60513d6](https://github.com/dsebastien/obsidian-life-tracker-base-view/commit/60513d62c2ee1bb6d2f920b641d7b9c4ec4f2c38))
 ## [1.2.5](https://github.com/dsebastien/obsidian-life-tracker-base-view/compare/1.2.3...1.2.5) (2026-02-16)
 ## [1.2.3](https://github.com/dsebastien/obsidian-life-tracker-base-view/compare/1.2.2...1.2.3) (2026-02-16)
 
