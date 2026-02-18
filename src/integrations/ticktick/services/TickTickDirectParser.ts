@@ -358,13 +358,28 @@ export function parseTickTickAPI(
         const fromDate = new Date(dateRange.from)
         const toDate = new Date(dateRange.to)
         filteredTasks = tasks.filter((task) => {
-            const taskDate = task.completedTime
-                ? new Date(task.completedTime)
-                : task.dueDate
-                  ? new Date(task.dueDate)
-                  : null
-            if (!taskDate) return true // Include if no date
-            return taskDate >= fromDate && taskDate <= toDate
+            // For completed tasks, use completedTime
+            if (task.completedTime) {
+                const completed = new Date(task.completedTime)
+                return completed >= fromDate && completed <= toDate
+            }
+            // For undone tasks, check dueDate or startDate to see if
+            // the task is relevant to this date range
+            const due = task.dueDate ? new Date(task.dueDate) : null
+            const start = task.startDate ? new Date(task.startDate) : null
+            if (due && start) {
+                // Task overlaps with range if it starts before range end
+                // and is due after range start
+                return start <= toDate && due >= fromDate
+            }
+            if (due) {
+                return due >= fromDate && due <= toDate
+            }
+            if (start) {
+                return start >= fromDate && start <= toDate
+            }
+            // No date at all — skip for date-filtered queries
+            return false
         })
     }
 
@@ -376,10 +391,10 @@ export function parseTickTickAPI(
         const minutes = extractFocusMinutes(task)
 
         // Determine task status
-        // status: 0=normal, 1=completed, 2=archived (won't do)
+        // TickTick API: status 0=active/undone, 2=completed, -1=won't do
         const isCompleted = task.status === 2
         const isWontDo = task.status === -1
-        const isUndone = task.status === 1
+        const isUndone = task.status === 0
 
         // Check special categories
         const habitCategory = getHabitCategory(tags)

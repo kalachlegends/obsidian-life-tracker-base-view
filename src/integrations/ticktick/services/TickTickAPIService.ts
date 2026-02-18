@@ -308,7 +308,7 @@ export class TickTickAPIService {
         // Parse using the direct parser
         const result = parseTickTickTasks(tasks, projects, dateRange)
 
-        // Add focus data from the dedicated endpoints
+        // Focus data — flat top-level keys for YAML frontmatter
         const totalFocusSeconds = focusHeatmap.reduce(
             (sum, entry) => sum + (entry.duration || 0),
             0
@@ -316,13 +316,9 @@ export class TickTickAPIService {
         const focusMinutesFromHeatmap = Math.round(totalFocusSeconds / 60)
         const focusHoursFromHeatmap = Math.round((focusMinutesFromHeatmap / 60) * 100) / 100
 
-        result['focus_data'] = {
-            total_seconds: totalFocusSeconds,
-            total_minutes: focusMinutesFromHeatmap,
-            total_hours: focusHoursFromHeatmap,
-            heatmap: focusHeatmap,
-            distribution: focusDistribution
-        }
+        result['focus_total_seconds'] = totalFocusSeconds
+        result['focus_total_minutes'] = focusMinutesFromHeatmap
+        result['focus_total_hours'] = focusHoursFromHeatmap
 
         // Override focus_minutes/hours if heatmap gives better data
         if (focusMinutesFromHeatmap > 0) {
@@ -330,20 +326,30 @@ export class TickTickAPIService {
             result['focus_hours'] = focusHoursFromHeatmap
         }
 
-        // Add habit data
+        // Focus distribution — each category as focus_dist_<name>
+        for (const [category, seconds] of Object.entries(focusDistribution)) {
+            const key = `focus_dist_${category.toLowerCase().replace(/\s+/g, '_')}`
+            result[key] = Math.round(Number(seconds) / 60)
+        }
+
+        // Habit data — flat top-level keys for YAML frontmatter
         const activeHabits = habits.filter((h) => h.status !== 2)
-        result['habit_data'] = {
-            total: habits.length,
-            active: activeHabits.length,
-            habits: activeHabits.map((h) => ({
-                name: h.name,
-                type: h.type ?? 'Boolean',
-                goal: h.goal ?? 1,
-                unit: h.unit ?? '',
-                streak: h.currentStreak ?? 0,
-                total_checkins: h.totalCheckIns ?? 0,
-                color: h.color ?? null
-            }))
+        result['habits_total'] = habits.length
+        result['habits_active'] = activeHabits.length
+
+        // Habit names as a list (YAML array)
+        result['habit_names'] = activeHabits.map((h) => h.name)
+
+        // Habit streaks as individual keys: habit_streak_<name>
+        for (const h of activeHabits) {
+            const key = `habit_streak_${h.name.toLowerCase().replace(/\s+/g, '_')}`
+            result[key] = h.currentStreak ?? 0
+        }
+
+        // Habit checkin totals as individual keys: habit_checkins_<name>
+        for (const h of activeHabits) {
+            const key = `habit_checkins_${h.name.toLowerCase().replace(/\s+/g, '_')}`
+            result[key] = h.totalCheckIns ?? 0
         }
 
         // Add input reference for debugging
