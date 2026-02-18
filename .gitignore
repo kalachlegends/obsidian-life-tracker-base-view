@@ -91,6 +91,9 @@ playwright-report/
 .turbo/
 .parcel-cache/
 
+# Worktrees
+worktrees/
+
 # Runtime data
 pids/
 *.pid

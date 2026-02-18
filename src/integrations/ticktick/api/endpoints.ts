@@ -14,7 +14,15 @@ export const ENDPOINTS = {
     projectAllTrashPagination: 'project/all/trash/pagination',
     exportData: 'data/export',
     projectMove: 'batch/taskProject',
-    parentMove: 'batch/taskParent'
+    parentMove: 'batch/taskParent',
+    /** Focus heatmap: /pomodoros/statistics/heatmap/{startYYYYMMDD}/{endYYYYMMDD} */
+    focusHeatmap: 'pomodoros/statistics/heatmap/{startDate}/{endDate}',
+    /** Focus distribution: /pomodoros/statistics/dist/{startYYYYMMDD}/{endYYYYMMDD} */
+    focusDistribution: 'pomodoros/statistics/dist/{startDate}/{endDate}',
+    /** List all habits */
+    habits: 'habits',
+    /** Batch create/update/delete habit checkins */
+    habitCheckins: 'habitCheckins/batch'
 } as const
 
 export type EndpointKey = keyof typeof ENDPOINTS

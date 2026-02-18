@@ -227,6 +227,25 @@ function isSprintTask(tags: string[]): { isSprint: boolean; sprintTag: string | 
 }
 
 /**
+ * Format a TickTick date string to a short display format.
+ * Input: "2026-02-18T09:00:00.000+0000" or ISO string
+ * Output: "2026-02-18 09:00" or "2026-02-18" (all-day)
+ */
+function formatTaskDate(dateStr: string | null): string | null {
+    if (!dateStr) return null
+    try {
+        const d = new Date(dateStr)
+        if (isNaN(d.getTime())) return null
+        const date = d.toISOString().substring(0, 10)
+        const time = d.toISOString().substring(11, 16)
+        // If time is midnight, it's likely an all-day task
+        return time === '00:00' ? date : `${date} ${time}`
+    } catch {
+        return null
+    }
+}
+
+/**
  * Build task text representation similar to Markdown parser
  */
 function buildTaskText(task: ITask, projectName: string, tags: string[]): string {
@@ -250,6 +269,17 @@ function buildTaskText(task: ITask, projectName: string, tags: string[]): string
         } else {
             text += ` (${timeStr})`
         }
+    }
+
+    // Add date range (startDate -> dueDate)
+    const start = formatTaskDate(task.startDate)
+    const due = formatTaskDate(task.dueDate)
+    if (start && due) {
+        text += ` [${start} → ${due}]`
+    } else if (due) {
+        text += ` [due: ${due}]`
+    } else if (start) {
+        text += ` [start: ${start}]`
     }
 
     // Add project

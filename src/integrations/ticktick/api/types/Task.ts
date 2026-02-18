@@ -61,3 +61,62 @@ export interface ISyncResponse {
     }
     checkPoint: number
 }
+
+/**
+ * Focus heatmap entry — one element per day in the range
+ */
+export interface IFocusHeatmapEntry {
+    /** Total focus duration in seconds for that day */
+    duration: number
+}
+
+/**
+ * Focus distribution — maps tag/project names to total focus duration
+ */
+export type IFocusDistribution = Record<string, number>
+
+/**
+ * TickTick habit definition
+ */
+export interface IHabit {
+    id: string
+    name: string
+    iconRes?: string
+    color?: string
+    sortOrder?: number
+    /** 0=Active, 2=Archived */
+    status?: number
+    encouragement?: string
+    totalCheckIns?: number
+    currentStreak?: number
+    createdTime?: string
+    modifiedTime?: string
+    archivedTime?: string
+    /** "Boolean" = yes/no, "Real" = numeric */
+    type?: 'Boolean' | 'Real'
+    goal?: number
+    step?: number
+    unit?: string
+    recordEnable?: boolean
+    repeatRule?: string
+    reminders?: string[]
+    sectionId?: string
+    targetDays?: number
+    targetStartDate?: number
+    completedCycles?: number
+}
+
+/**
+ * Habit check-in record
+ */
+export interface IHabitCheckin {
+    id: string
+    habitId: string
+    /** YYYYMMDD as integer (e.g. 20240115) */
+    checkinStamp: number
+    checkinTime: string
+    opTime: string
+    value: number
+    goal: number
+    status: number
+}

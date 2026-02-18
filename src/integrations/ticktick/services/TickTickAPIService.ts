@@ -1,5 +1,5 @@
 import { requestUrl } from 'obsidian'
-import type { ITask } from '../api/types/Task'
+import type { ITask, IFocusHeatmapEntry, IFocusDistribution, IHabit } from '../api/types/Task'
 import type { IProject } from '../api/types/Project'
 import { parseTickTickTasks } from './TickTickDirectParser'
 
@@ -212,6 +212,83 @@ export class TickTickAPIService {
     }
 
     /**
+     * Convert "YYYY-MM-DD HH:mm:ss" date string to YYYYMMDD format
+     * Required for focus/pomodoro endpoints
+     */
+    private toYYYYMMDD(dateStr: string): string {
+        return dateStr.substring(0, 10).replace(/-/g, '')
+    }
+
+    /**
+     * Get focus time heatmap for a date range.
+     * Returns an array of durations (seconds) per day.
+     * Uses V2 endpoint: /pomodoros/statistics/heatmap/{startYYYYMMDD}/{endYYYYMMDD}
+     */
+    async getFocusHeatmap(dateRange: DateRange): Promise<IFocusHeatmapEntry[]> {
+        const startDate = this.toYYYYMMDD(dateRange.from)
+        const endDate = this.toYYYYMMDD(dateRange.to)
+        const url = `${this.apiUrl}/pomodoros/statistics/heatmap/${startDate}/${endDate}`
+
+        console.debug(`[TickTick] Fetching focus heatmap: ${url}`)
+        try {
+            const response = await this.makeRequest(url, 'GET')
+            if (Array.isArray(response)) {
+                console.debug(`[TickTick] Got ${response.length} focus heatmap entries`)
+                return response as IFocusHeatmapEntry[]
+            }
+            return []
+        } catch (error) {
+            console.debug('[TickTick] Focus heatmap fetch failed (may not be available):', error)
+            return []
+        }
+    }
+
+    /**
+     * Get focus time distribution by tag/project for a date range.
+     * Returns a map of tag/project name -> total duration in seconds.
+     * Uses V2 endpoint: /pomodoros/statistics/dist/{startYYYYMMDD}/{endYYYYMMDD}
+     */
+    async getFocusDistribution(dateRange: DateRange): Promise<IFocusDistribution> {
+        const startDate = this.toYYYYMMDD(dateRange.from)
+        const endDate = this.toYYYYMMDD(dateRange.to)
+        const url = `${this.apiUrl}/pomodoros/statistics/dist/${startDate}/${endDate}`
+
+        console.debug(`[TickTick] Fetching focus distribution: ${url}`)
+        try {
+            const response = await this.makeRequest(url, 'GET')
+            if (response && typeof response === 'object' && !Array.isArray(response)) {
+                console.debug('[TickTick] Got focus distribution data')
+                return response as IFocusDistribution
+            }
+            return {}
+        } catch (error) {
+            console.debug('[TickTick] Focus distribution fetch failed:', error)
+            return {}
+        }
+    }
+
+    /**
+     * Get all habits.
+     * Uses V2 endpoint: /habits
+     */
+    async getHabits(): Promise<IHabit[]> {
+        const url = `${this.apiUrl}/habits`
+
+        console.debug(`[TickTick] Fetching habits: ${url}`)
+        try {
+            const response = await this.makeRequest(url, 'GET')
+            if (Array.isArray(response)) {
+                console.debug(`[TickTick] Got ${response.length} habits`)
+                return response as IHabit[]
+            }
+            return []
+        } catch (error) {
+            console.debug('[TickTick] Habits fetch failed:', error)
+            return []
+        }
+    }
+
+    /**
      * Main parsing function - fetches tasks and returns formatted result
      * Same output format as your existing TickTickInput script
      *
@@ -219,17 +296,64 @@ export class TickTickAPIService {
      * @returns Parsed result object matching your existing parser format
      */
     async parseTasksForDateRange(dateRange: DateRange): Promise<Record<string, unknown>> {
-        // Fetch all necessary data
-        const [tasks, projects] = await Promise.all([
+        // Fetch all necessary data in parallel
+        const [tasks, projects, focusHeatmap, focusDistribution, habits] = await Promise.all([
             this.getTasksForDateRange(dateRange),
-            this.getProjects()
+            this.getProjects(),
+            this.getFocusHeatmap(dateRange),
+            this.getFocusDistribution(dateRange),
+            this.getHabits()
         ])
 
         // Parse using the direct parser
         const result = parseTickTickTasks(tasks, projects, dateRange)
 
+        // Add focus data from the dedicated endpoints
+        const totalFocusSeconds = focusHeatmap.reduce(
+            (sum, entry) => sum + (entry.duration || 0),
+            0
+        )
+        const focusMinutesFromHeatmap = Math.round(totalFocusSeconds / 60)
+        const focusHoursFromHeatmap = Math.round((focusMinutesFromHeatmap / 60) * 100) / 100
+
+        result['focus_data'] = {
+            total_seconds: totalFocusSeconds,
+            total_minutes: focusMinutesFromHeatmap,
+            total_hours: focusHoursFromHeatmap,
+            heatmap: focusHeatmap,
+            distribution: focusDistribution
+        }
+
+        // Override focus_minutes/hours if heatmap gives better data
+        if (focusMinutesFromHeatmap > 0) {
+            result['focus_minutes'] = focusMinutesFromHeatmap
+            result['focus_hours'] = focusHoursFromHeatmap
+        }
+
+        // Add habit data
+        const activeHabits = habits.filter((h) => h.status !== 2)
+        result['habit_data'] = {
+            total: habits.length,
+            active: activeHabits.length,
+            habits: activeHabits.map((h) => ({
+                name: h.name,
+                type: h.type ?? 'Boolean',
+                goal: h.goal ?? 1,
+                unit: h.unit ?? '',
+                streak: h.currentStreak ?? 0,
+                total_checkins: h.totalCheckIns ?? 0,
+                color: h.color ?? null
+            }))
+        }
+
         // Add input reference for debugging
         result['input'] = `TickTick API: ${dateRange.from} to ${dateRange.to}`
+
+        console.debug(
+            `[TickTick] Parse result: focus=${focusMinutesFromHeatmap}min, ` +
+                `habits=${activeHabits.length} active, ` +
+                `tasks=${tasks.length}`
+        )
 
         return result
     }
