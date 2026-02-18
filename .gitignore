@@ -99,3 +99,4 @@ pids/
 *.pid
 *.seed
 *.pid.lock
+wortree/
