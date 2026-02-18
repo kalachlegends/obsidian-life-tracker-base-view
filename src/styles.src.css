@@ -3760,7 +3760,7 @@
    ======================================== */
 
 .lt-ai-analysis-modal {
-    @apply p-0 overflow-hidden;
+      overflow-visible: true;
     max-width: min(800px, calc(100vw - 32px));
     min-width: min(600px, calc(100vw - 32px));
 }
@@ -3800,7 +3800,7 @@
 }
 
 .lt-ai-analysis-content {
-    overflow-visible: true,
+    overflow-visible: true;
     @apply p-4;
 }
 
