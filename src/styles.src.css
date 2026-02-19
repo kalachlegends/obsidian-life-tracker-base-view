@@ -2835,18 +2835,20 @@
    ======================================== */
 
 .lt-daily-modal {
-    @apply p-0 overflow-hidden;
+    overflow: scroll;
     max-width: min(560px, calc(100vw - 32px));
     min-width: min(420px, calc(100vw - 32px));
 }
 
 .lt-daily-modal .modal-content {
-    @apply p-0 overflow-y-auto;
+    overflow: scroll;
     max-height: 80vh;
 }
 
 .lt-daily-container {
-    @apply flex flex-col p-8;
+    @apply flex flex-col p-8 overflow-hidden;
+    flex: 1;
+    min-height: 0;
 }
 
 .lt-daily-title {
@@ -2860,7 +2862,10 @@
 }
 
 .lt-daily-fields {
-    @apply flex flex-col gap-5;
+    overflow: scroll;
+    @apply flex flex-col gap-5 overflow-y-auto pr-1;
+    flex: 1;
+    min-height: 0;
 }
 
 .lt-daily-field {
@@ -3043,12 +3048,14 @@
     }
 
     .lt-daily-modal .modal-content {
-        @apply h-full w-full overflow-y-auto p-0;
+        @apply h-full w-full overflow-hidden flex flex-col p-0;
         max-height: 100vh;
     }
 
     .lt-daily-container {
-        @apply p-4;
+        @apply p-4 overflow-hidden;
+        flex: 1;
+        min-height: 0;
     }
 
     .lt-daily-title {
@@ -3113,6 +3120,13 @@
     @apply flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold;
     background-color: var(--interactive-accent);
     color: var(--text-on-accent);
+}
+
+.lt-thoughts-item-time {
+    @apply flex-shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold leading-none;
+    background-color: var(--background-primary-alt);
+    color: var(--text-muted);
+    font-family: var(--font-monospace);
 }
 
 .lt-thoughts-item-text {

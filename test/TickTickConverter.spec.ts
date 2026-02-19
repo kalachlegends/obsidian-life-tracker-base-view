@@ -67,7 +67,7 @@ test('TickTick Converter - basic task conversion', () => {
     const result = converter.convertTasksToManualFormat(tasks, projects, 'January 7')
 
     expect(result).toContain('## Completed')
-    expect(result).toContain('- [x] Review code #15xp <Work>')
+    expect(result).toContain('- [x] Review code #10xp <Work>')
     expect(result).toContain('# January 7')
 })
 
@@ -118,7 +118,7 @@ test('TickTick Converter - task with existing XP', () => {
 
     // Should not add duplicate XP
     expect(result).toContain('#25xp')
-    expect(result).not.toContain('#25xp #5xp')
+    expect(result).not.toContain('#25xp #1xp')
 })
 
 test('TickTick Converter - uncompleted task', () => {
@@ -175,10 +175,10 @@ test('TickTick Converter - priority to XP mapping', () => {
 
     // Test different priorities
     const testCases = [
-        { priority: 0, expected: 5 }, // none
+        { priority: 0, expected: 1 }, // none
         { priority: 1, expected: 5 }, // low
-        { priority: 3, expected: 15 }, // medium
-        { priority: 5, expected: 25 } // high
+        { priority: 3, expected: 10 }, // medium
+        { priority: 5, expected: 15 } // high
     ]
 
     for (const testCase of testCases) {

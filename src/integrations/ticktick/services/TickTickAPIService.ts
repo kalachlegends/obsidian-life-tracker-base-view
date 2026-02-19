@@ -221,7 +221,7 @@ export class TickTickAPIService {
 
     /**
      * Get focus time heatmap for a date range.
-     * Returns an array of durations (seconds) per day.
+     * Returns an array of durations (minutes) per day.
      * Uses V2 endpoint: /pomodoros/statistics/heatmap/{startYYYYMMDD}/{endYYYYMMDD}
      */
     async getFocusHeatmap(dateRange: DateRange): Promise<IFocusHeatmapEntry[]> {
@@ -245,7 +245,7 @@ export class TickTickAPIService {
 
     /**
      * Get focus time distribution by tag/project for a date range.
-     * Returns a map of tag/project name -> total duration in seconds.
+     * Returns a map of tag/project name -> total duration in minutes.
      * Uses V2 endpoint: /pomodoros/statistics/dist/{startYYYYMMDD}/{endYYYYMMDD}
      */
     async getFocusDistribution(dateRange: DateRange): Promise<IFocusDistribution> {
@@ -272,9 +272,13 @@ export class TickTickAPIService {
      * Same output format as your existing TickTickInput script
      *
      * @param dateRange - Date range to fetch tasks for
+     * @param timeZone - Optional IANA timezone for date display (e.g., "Asia/Almaty")
      * @returns Parsed result object matching your existing parser format
      */
-    async parseTasksForDateRange(dateRange: DateRange): Promise<Record<string, unknown>> {
+    async parseTasksForDateRange(
+        dateRange: DateRange,
+        timeZone?: string
+    ): Promise<Record<string, unknown>> {
         // Fetch tasks, projects, and focus data in parallel
         // Habits are already parsed from task tags in TickTickDirectParser
         const [tasks, projects, focusHeatmap, focusDistribution] = await Promise.all([
@@ -285,44 +289,43 @@ export class TickTickAPIService {
         ])
 
         // Parse using the direct parser (handles habits via task tags)
-        const result = parseTickTickTasks(tasks, projects, dateRange)
+        const result = parseTickTickTasks(tasks, projects, dateRange, timeZone)
 
         // Focus data — flat top-level keys for YAML frontmatter
-        const totalFocusSeconds = focusHeatmap.reduce(
+        // Note: TickTick heatmap API returns duration in minutes, not seconds
+        const totalFocusMinutes = focusHeatmap.reduce(
             (sum, entry) => sum + (entry.duration || 0),
             0
         )
-        const focusMinutesFromHeatmap = Math.round(totalFocusSeconds / 60)
-        const focusHoursFromHeatmap = Math.round((focusMinutesFromHeatmap / 60) * 100) / 100
+        const focusHoursFromHeatmap = Math.round((totalFocusMinutes / 60) * 100) / 100
 
-        result['focus_total_seconds'] = totalFocusSeconds
-        result['focus_total_minutes'] = focusMinutesFromHeatmap
+        result['focus_total_minutes'] = totalFocusMinutes
         result['focus_total_hours'] = focusHoursFromHeatmap
 
         // Override focus_minutes/hours if heatmap gives better data
-        if (focusMinutesFromHeatmap > 0) {
-            result['focus_minutes'] = focusMinutesFromHeatmap
+        if (totalFocusMinutes > 0) {
+            result['focus_minutes'] = totalFocusMinutes
             result['focus_hours'] = focusHoursFromHeatmap
         }
 
-        // Focus distribution — each category as focus_dist_<name>
+        // Focus distribution — each category as focus_dist_<name> (in minutes)
         // Skip metadata keys (projectDurations, tagDurations, taskDurations) that
-        // contain nested objects, not numeric seconds.
+        // contain nested objects, not numeric values.
+        // Note: TickTick distribution API returns duration in minutes, not seconds
         const DIST_SKIP_KEYS = new Set(['projectDurations', 'tagDurations', 'taskDurations'])
-        for (const [category, seconds] of Object.entries(focusDistribution)) {
+        for (const [category, minutes] of Object.entries(focusDistribution)) {
             if (DIST_SKIP_KEYS.has(category)) continue
-            const numSeconds = Number(seconds)
-            if (isNaN(numSeconds)) continue
+            const numMinutes = Number(minutes)
+            if (isNaN(numMinutes)) continue
             const key = `focus_dist_${category.toLowerCase().replace(/\s+/g, '_')}`
-            result[key] = Math.round(numSeconds / 60)
+            result[key] = Math.round(numMinutes)
         }
 
         // Add input reference for debugging
         result['input'] = `TickTick API: ${dateRange.from} to ${dateRange.to}`
 
         console.debug(
-            `[TickTick] Parse result: focus=${focusMinutesFromHeatmap}min, ` +
-                `tasks=${tasks.length}`
+            `[TickTick] Parse result: focus=${totalFocusMinutes}min, ` + `tasks=${tasks.length}`
         )
 
         return result

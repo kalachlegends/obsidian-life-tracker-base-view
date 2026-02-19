@@ -559,6 +559,6 @@ this.registerInterval(
 - Obsidian sample plugin using Bun: https://github.com/rzbin/obsidian-plugin-template-bun
 - API documentation: https://docs.obsidian.md
 - Bun documentation: https://bun.com/docs
-- Developer policies: https://docs.obsidian.md/Developer+policies
+- Developer policies: https://docs.obsidian.md/Developer+policiesag
 - Plugin guidelines: https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines
 - Style guide: https://help.obsidian.md/style-guide

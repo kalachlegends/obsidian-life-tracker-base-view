@@ -1,4 +1,4 @@
-import { MarkdownRenderer, Modal, Notice, normalizePath } from 'obsidian'
+import { MarkdownRenderer, Modal, Notice, type TFile, normalizePath } from 'obsidian'
 import type { LifeTrackerPlugin } from '../../plugin'
 import type { AIAnalysisResult } from '../../types'
 import { AI_PROVIDER_LABELS } from '../../types'
@@ -8,18 +8,23 @@ import { log } from '../../../utils'
 /**
  * Modal to display AI analysis results.
  * Renders markdown content with a header showing provider info.
- * Auto-saves to note when the setting is enabled.
+ * Saves to the currently active file by default (appended at end).
+ * Optionally also saves to a dedicated folder when configured.
  */
 export class AIAnalysisModal extends Modal {
     private plugin: LifeTrackerPlugin
     private result: AIAnalysisResult
     private title: string
+    /** The file that was active when the modal was created */
+    private activeFile: TFile | null
 
     constructor(plugin: LifeTrackerPlugin, result: AIAnalysisResult, title: string) {
         super(plugin.app)
         this.plugin = plugin
         this.result = result
         this.title = title
+        // Capture active file at construction time (before modal opens and focus changes)
+        this.activeFile = plugin.app.workspace.getActiveFile()
     }
 
     override onOpen(): void {
@@ -105,13 +110,58 @@ export class AIAnalysisModal extends Modal {
     }
 
     /**
-     * Save the AI analysis result to a note in the vault.
-     * Creates a new note in the "Life Tracker Reports" folder with the analysis content.
+     * Save the AI analysis result.
+     * Always appends to the currently active file.
+     * Optionally also saves to a dedicated folder when `saveToFolder` is enabled.
      */
     private async saveToNote(): Promise<void> {
-        const folderPath = 'Life Tracker Reports'
         const dateStr = formatDateISO(new Date())
-        // Sanitize title for use as filename: remove colons and special chars
+        const providerInfo = `${AI_PROVIDER_LABELS[this.result.provider]} / ${this.result.model}`
+
+        // Build the content block to append
+        const appendContent = [
+            '',
+            `## ${this.title}`,
+            '',
+            `> Generated on ${dateStr} by Life Tracker using ${providerInfo}`,
+            '',
+            this.result.content
+        ].join('\n')
+
+        // 1. Append to active file
+        await this.appendToActiveFile(appendContent)
+
+        // 2. Optionally also save to a dedicated folder
+        if (this.plugin.settings.ai.saveToFolder) {
+            await this.saveToFolder(dateStr, providerInfo)
+        }
+    }
+
+    /**
+     * Append content to the currently active file.
+     */
+    private async appendToActiveFile(content: string): Promise<void> {
+        const file = this.activeFile
+        if (!file) {
+            new Notice('No active file to append report to')
+            return
+        }
+
+        try {
+            const existing = await this.plugin.app.vault.read(file)
+            await this.plugin.app.vault.modify(file, existing + content)
+            new Notice(`Report appended to ${file.basename}`)
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error'
+            new Notice(`Failed to append report: ${message}`)
+        }
+    }
+
+    /**
+     * Save the AI analysis result as a separate note in the configured reports folder.
+     */
+    private async saveToFolder(dateStr: string, providerInfo: string): Promise<void> {
+        const folderPath = this.plugin.settings.ai.reportFolderPath || 'Life Tracker Reports'
         const sanitizedTitle = this.title
             .replace(/[:/\\?*"<>|]/g, '-')
             .replace(/\s+/g, ' ')
@@ -119,11 +169,10 @@ export class AIAnalysisModal extends Modal {
         const fileName = `${dateStr} - ${sanitizedTitle}.md`
         const filePath = normalizePath(`${folderPath}/${fileName}`)
 
-        // Build note content
         const noteContent = [
             `# ${this.title}`,
             '',
-            `> Generated on ${dateStr} by Life Tracker using ${AI_PROVIDER_LABELS[this.result.provider]} / ${this.result.model}`,
+            `> Generated on ${dateStr} by Life Tracker using ${providerInfo}`,
             '',
             this.result.content
         ].join('\n')
@@ -138,20 +187,15 @@ export class AIAnalysisModal extends Modal {
             // Check if file already exists
             const existing = this.plugin.app.vault.getAbstractFileByPath(filePath)
             if (existing) {
-                // Overwrite existing file
-                await this.plugin.app.vault.modify(
-                    existing as import('obsidian').TFile,
-                    noteContent
-                )
-                new Notice(`Report updated: ${fileName}`)
+                await this.plugin.app.vault.modify(existing as TFile, noteContent)
+                log(`[AIAnalysisModal] Report updated in folder: ${fileName}`, 'debug')
             } else {
-                // Create new file
                 await this.plugin.app.vault.create(filePath, noteContent)
-                new Notice(`Report saved: ${fileName}`)
+                log(`[AIAnalysisModal] Report saved to folder: ${fileName}`, 'debug')
             }
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Unknown error'
-            new Notice(`Failed to save report: ${message}`)
+            new Notice(`Failed to save report to folder: ${message}`)
         }
     }
 

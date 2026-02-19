@@ -21,6 +21,9 @@ export interface HCGatewaySettings {
 
     /** Frontmatter property prefix for health data (e.g., "health" -> "health_steps") */
     propertyPrefix: string
+
+    /** IANA timezone for date queries (e.g., "Asia/Almaty"). Ensures correct day boundaries. */
+    timeZone: string
 }
 
 export const DEFAULT_HCGATEWAY_SETTINGS: HCGatewaySettings = {
@@ -29,5 +32,6 @@ export const DEFAULT_HCGATEWAY_SETTINGS: HCGatewaySettings = {
     username: '',
     password: '',
     enabledDataTypes: [],
-    propertyPrefix: 'health'
+    propertyPrefix: 'health',
+    timeZone: 'Asia/Almaty'
 }

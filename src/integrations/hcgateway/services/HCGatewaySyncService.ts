@@ -2,7 +2,7 @@ import type { App, TFile } from 'obsidian'
 import type { HCGatewayAPI } from '../api/HCGatewayAPI'
 import type { HCGatewayRecord, HCGatewayDataType } from '../types'
 import { HCGATEWAY_DATA_TYPES, HCGATEWAY_DATA_TYPE_LABELS } from '../types'
-import { log } from '../../../utils'
+import { log, getTimezoneOffset } from '../../../utils'
 
 /**
  * Result from a single data type sync
@@ -49,13 +49,15 @@ export class HCGatewaySyncService {
      * @param date ISO date string (YYYY-MM-DD) to fetch data for
      * @param enabledDataTypes Which data types to fetch (empty = all)
      * @param propertyPrefix Frontmatter property prefix (e.g., "health" -> "health_steps")
+     * @param timeZone IANA timezone for date boundary queries (e.g., "Asia/Almaty")
      */
     async syncToNote(
         app: App,
         file: TFile,
         date: string,
         enabledDataTypes: string[],
-        propertyPrefix: string
+        propertyPrefix: string,
+        timeZone: string
     ): Promise<SyncResult> {
         const result: SyncResult = {
             success: false,
@@ -83,18 +85,21 @@ export class HCGatewaySyncService {
             'debug'
         )
 
-        // Build date queries
-        const startOfDay = `${date}T00:00:00`
-        const endOfDay = `${date}T23:59:59`
+        // Build date queries with timezone offset
+        const offset = getTimezoneOffset(date, timeZone)
+        log(`[HCGateway Sync] Using timezone "${timeZone}" (offset ${offset})`, 'debug')
+
+        const startOfDay = `${date}T00:00:00${offset}`
+        const endOfDay = `${date}T23:59:59${offset}`
         const defaultDateQuery = {
             start: { $gte: startOfDay, $lte: endOfDay }
         }
 
         // Sleep sessions start the previous evening, so we extend the query
         // to capture sleep that began at 18:00 the day before.
-        const prevDate = this.getPreviousDate(date)
+        const prevDate = this.getPreviousDate(date, timeZone)
         const sleepDateQuery = {
-            start: { $gte: `${prevDate}T18:00:00`, $lte: endOfDay }
+            start: { $gte: `${prevDate}T18:00:00${offset}`, $lte: endOfDay }
         }
 
         log(`[HCGateway Sync] Default date query: ${JSON.stringify(defaultDateQuery)}`, 'debug')
@@ -745,8 +750,9 @@ export class HCGatewaySyncService {
      * Get the previous date in YYYY-MM-DD format.
      * Used to extend sleep queries into the previous evening.
      */
-    private getPreviousDate(dateStr: string): string {
-        const d = new Date(dateStr + 'T12:00:00')
+    private getPreviousDate(dateStr: string, timeZone: string): string {
+        const offset = getTimezoneOffset(dateStr, timeZone)
+        const d = new Date(dateStr + 'T12:00:00' + offset)
         d.setDate(d.getDate() - 1)
         const y = d.getFullYear()
         const m = String(d.getMonth() + 1).padStart(2, '0')

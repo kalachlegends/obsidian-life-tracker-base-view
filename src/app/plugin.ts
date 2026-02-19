@@ -244,6 +244,11 @@ export class LifeTrackerPlugin extends Plugin {
                 draft.thoughtsPropertyName = loadedSettings.thoughtsPropertyName
             }
 
+            // Load daily notes folder
+            if (typeof loadedSettings.dailyNotesFolder === 'string') {
+                draft.dailyNotesFolder = loadedSettings.dailyNotesFolder
+            }
+
             // Load HCGateway settings
             if (loadedSettings.hcgateway) {
                 draft.hcgateway = {

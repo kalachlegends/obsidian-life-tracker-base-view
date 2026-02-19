@@ -3,10 +3,31 @@ import type { LifeTrackerPlugin } from '../../plugin'
 import { FrontmatterService } from '../../services/frontmatter.service'
 import { formatFileTitleWithWeekday, log } from '../../../utils'
 
+/** Regex to detect a `[HH:mm]` prefix on a stored thought string. */
+const TIMESTAMP_RE = /^\[(\d{2}:\d{2})\]\s*/
+
+/** Parse a stored thought into its optional timestamp and text parts. */
+function parseThought(raw: string): { time: string | null; text: string } {
+    const match = TIMESTAMP_RE.exec(raw)
+    if (match?.[1]) {
+        return { time: match[1], text: raw.slice(match[0].length) }
+    }
+    return { time: null, text: raw }
+}
+
+/** Return the current local time formatted as `HH:mm`. */
+function currentTime(): string {
+    const now = new Date()
+    const hh = String(now.getHours()).padStart(2, '0')
+    const mm = String(now.getMinutes()).padStart(2, '0')
+    return `${hh}:${mm}`
+}
+
 /**
  * Modal for quickly capturing thoughts throughout the day.
  * Appends each thought to a list property in the note's frontmatter.
  * Shows existing thoughts and provides a textarea to add new ones.
+ * Each thought is stored with a `[HH:mm]` timestamp prefix.
  */
 export class ThoughtsModal extends Modal {
     private plugin: LifeTrackerPlugin
@@ -120,6 +141,8 @@ export class ThoughtsModal extends Modal {
 
     /**
      * Render the list of existing thoughts.
+     * Displays the `[HH:mm]` timestamp (if present) as a styled badge
+     * instead of the numeric index.
      */
     private renderThoughtsList(): void {
         if (!this.thoughtsListEl) return
@@ -137,18 +160,26 @@ export class ThoughtsModal extends Modal {
             const thought = this.thoughts[i]
             if (thought === undefined) continue
 
+            const { time, text } = parseThought(thought)
             const itemEl = this.thoughtsListEl.createDiv({ cls: 'lt-thoughts-item' })
 
-            // Index badge
-            itemEl.createSpan({
-                cls: 'lt-thoughts-item-index',
-                text: `${i + 1}`
-            })
+            // Time badge (or fallback to numeric index for legacy thoughts)
+            if (time) {
+                itemEl.createSpan({
+                    cls: 'lt-thoughts-item-time',
+                    text: time
+                })
+            } else {
+                itemEl.createSpan({
+                    cls: 'lt-thoughts-item-index',
+                    text: `${i + 1}`
+                })
+            }
 
-            // Thought text
+            // Thought text (without the timestamp prefix)
             itemEl.createSpan({
                 cls: 'lt-thoughts-item-text',
-                text: thought
+                text
             })
 
             // Delete button
@@ -165,6 +196,7 @@ export class ThoughtsModal extends Modal {
 
     /**
      * Add a new thought from the textarea.
+     * Prepends a `[HH:mm]` timestamp to the stored value.
      */
     private async addThought(): Promise<void> {
         if (!this.textareaEl) return
@@ -175,7 +207,8 @@ export class ThoughtsModal extends Modal {
             return
         }
 
-        this.thoughts.push(text)
+        const stamped = `[${currentTime()}] ${text}`
+        this.thoughts.push(stamped)
         this.textareaEl.value = ''
 
         await this.saveThoughts()

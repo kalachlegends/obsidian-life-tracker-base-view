@@ -66,12 +66,12 @@ export interface ISyncResponse {
  * Focus heatmap entry — one element per day in the range
  */
 export interface IFocusHeatmapEntry {
-    /** Total focus duration in seconds for that day */
+    /** Total focus duration in minutes for that day */
     duration: number
 }
 
 /**
- * Focus distribution — maps tag/project names to total focus duration
+ * Focus distribution — maps tag/project names to total focus duration in minutes
  */
 export type IFocusDistribution = Record<string, number>
 

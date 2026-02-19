@@ -61,6 +61,12 @@ export interface AISettings {
 
     /** Auto-save reports to note after AI generation */
     autoSaveToNote: boolean
+
+    /** Also save reports to a dedicated folder ("Life Tracker Reports") */
+    saveToFolder: boolean
+
+    /** Folder path for saving reports when saveToFolder is enabled */
+    reportFolderPath: string
 }
 
 /**
@@ -229,7 +235,9 @@ export const DEFAULT_AI_SETTINGS: AISettings = {
     weeklySummary: DEFAULT_WEEKLY_SUMMARY_SETTINGS,
     monthlySummaryPrompt: '',
     monthlySummary: DEFAULT_MONTHLY_SUMMARY_SETTINGS,
-    autoSaveToNote: true
+    autoSaveToNote: true,
+    saveToFolder: false,
+    reportFolderPath: 'Life Tracker Reports'
 }
 
 /**

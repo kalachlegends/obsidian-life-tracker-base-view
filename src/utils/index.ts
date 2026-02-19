@@ -44,7 +44,8 @@ export {
     getMonthName,
     formatFileTitleWithWeekday,
     getTimeFrameDateRange,
-    isDateInTimeFrame
+    isDateInTimeFrame,
+    getTimezoneOffset
 } from './date.utils'
 export type { TimeFrameDateRange } from './date.utils'
 

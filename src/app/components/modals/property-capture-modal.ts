@@ -209,7 +209,8 @@ export class PropertyCaptureModal extends Modal {
             const { TickTickAPIService } =
                 await import('../../../integrations/ticktick/services/TickTickAPIService')
 
-            const dateRange = getTickTickDateRangeFromFilename(file.basename)
+            const tickTickTimeZone = this.plugin.settings.ticktick.timeZone
+            const dateRange = getTickTickDateRangeFromFilename(file.basename, tickTickTimeZone)
 
             if (!dateRange) {
                 log(
@@ -226,12 +227,12 @@ export class PropertyCaptureModal extends Modal {
             }
 
             log(
-                `[Capture] Fetching TickTick data for date range: ${dateRange.from} to ${dateRange.to}`,
+                `[Capture] Fetching TickTick data for date range: ${dateRange.from} to ${dateRange.to}, timeZone=${tickTickTimeZone}`,
                 'debug'
             )
 
             const apiService = new TickTickAPIService({ token })
-            const result = await apiService.parseTasksForDateRange(dateRange)
+            const result = await apiService.parseTasksForDateRange(dateRange, tickTickTimeZone)
 
             log(`[Capture] TickTick data received: ${JSON.stringify(result)}`, 'debug')
 
@@ -321,11 +322,11 @@ export class PropertyCaptureModal extends Modal {
             const day = String(parsed.date.getDate()).padStart(2, '0')
             const dateStr = `${year}-${month}-${day}`
 
-            const { username, password, baseUrl, enabledDataTypes, propertyPrefix } =
+            const { username, password, baseUrl, enabledDataTypes, propertyPrefix, timeZone } =
                 this.plugin.settings.hcgateway
 
             log(
-                `[Capture] HCGateway settings: baseUrl=${baseUrl}, user=${username}, prefix=${propertyPrefix}, enabledDataTypes=[${enabledDataTypes.join(', ') || 'ALL'}]`,
+                `[Capture] HCGateway settings: baseUrl=${baseUrl}, user=${username}, prefix=${propertyPrefix}, timeZone=${timeZone}, enabledDataTypes=[${enabledDataTypes.join(', ') || 'ALL'}]`,
                 'debug'
             )
             log(`[Capture] Fetching HCGateway health data for date: ${dateStr}`, 'debug')
@@ -352,7 +353,8 @@ export class PropertyCaptureModal extends Modal {
                 file,
                 dateStr,
                 enabledDataTypes,
-                propertyPrefix
+                propertyPrefix,
+                timeZone
             )
 
             log(

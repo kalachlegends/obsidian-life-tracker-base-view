@@ -420,12 +420,16 @@ export function isDateInTimeFrame(date: Date, dateRange: TimeFrameDateRange | nu
 
 /**
  * Create TickTick API date range for a single day
- * Returns range from start to end of the day in TickTick API format
+ * Returns range from start to end of the day in TickTick API format.
  *
  * @param date - Date object
+ * @param _timeZone - Reserved for future use (TickTick API uses naive datetime)
  * @returns DateRange object with from/to strings
  */
-export function createTickTickDayRange(date: Date): { from: string; to: string } {
+export function createTickTickDayRange(
+    date: Date,
+    _timeZone?: string
+): { from: string; to: string } {
     const dateStr = format(date, 'yyyy-MM-dd')
     return {
         from: `${dateStr} 00:00:00`,
@@ -435,12 +439,16 @@ export function createTickTickDayRange(date: Date): { from: string; to: string }
 
 /**
  * Create TickTick API date range for a week
- * Returns range from Monday to Sunday
+ * Returns range from Monday to Sunday.
  *
  * @param date - Any date within the week
+ * @param _timeZone - Reserved for future use (TickTick API uses naive datetime)
  * @returns DateRange object with from/to strings
  */
-export function createTickTickWeekRange(date: Date): { from: string; to: string } {
+export function createTickTickWeekRange(
+    date: Date,
+    _timeZone?: string
+): { from: string; to: string } {
     const monday = dateFnsStartOfWeek(date, { weekStartsOn: 1 })
     const sunday = dateFnsEndOfWeek(date, { weekStartsOn: 1 })
 
@@ -458,14 +466,51 @@ export function createTickTickWeekRange(date: Date): { from: string; to: string 
  * @returns DateRange object or null if date cannot be parsed
  */
 export function getTickTickDateRangeFromFilename(
-    filename: string
+    filename: string,
+    timeZone?: string
 ): { from: string; to: string } | null {
     const parsed = parseDateFromFilename(filename)
     if (!parsed) return null
 
     if (parsed.granularity === TimeGranularity.Weekly) {
-        return createTickTickWeekRange(parsed.date)
+        return createTickTickWeekRange(parsed.date, timeZone)
     }
 
-    return createTickTickDayRange(parsed.date)
+    return createTickTickDayRange(parsed.date, timeZone)
+}
+
+/**
+ * Compute the UTC offset string (e.g., "+05:00", "-08:00") for a given
+ * IANA timezone on a specific date. Returns empty string if the timezone
+ * is invalid or the offset cannot be determined.
+ *
+ * @param dateStr - ISO date string (YYYY-MM-DD) to compute offset for
+ * @param timeZone - IANA timezone identifier (e.g., "Asia/Almaty")
+ * @returns Offset string like "+05:00" or "" on failure
+ */
+export function getTimezoneOffset(dateStr: string, timeZone: string): string {
+    try {
+        // Create a date at noon to avoid DST boundary edge cases
+        const refDate = new Date(dateStr + 'T12:00:00Z')
+
+        // Use Intl to format the offset parts in the target timezone
+        const formatter = new Intl.DateTimeFormat('en-US', {
+            timeZone,
+            timeZoneName: 'longOffset'
+        })
+        const parts = formatter.formatToParts(refDate)
+        const tzPart = parts.find((p) => p.type === 'timeZoneName')
+
+        if (tzPart?.value) {
+            // Value is like "GMT+05:00" or "GMT-08:00" or "GMT" (for UTC)
+            const match = /GMT([+-]\d{2}:\d{2})/.exec(tzPart.value)
+            if (match?.[1]) return match[1]
+            // "GMT" with no offset means UTC
+            if (tzPart.value === 'GMT') return '+00:00'
+        }
+
+        return ''
+    } catch {
+        return ''
+    }
 }

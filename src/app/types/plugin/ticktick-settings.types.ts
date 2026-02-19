@@ -31,6 +31,9 @@ export interface TickTickSettings {
 
     /** Additional tags to add to all imported tasks */
     addTags: string[]
+
+    /** IANA timezone for date queries and task display (e.g., "Asia/Almaty") */
+    timeZone: string
 }
 
 export const DEFAULT_TICKTICK_SETTINGS: TickTickSettings = {
@@ -47,5 +50,6 @@ export const DEFAULT_TICKTICK_SETTINGS: TickTickSettings = {
     syncDateRangeDays: 30,
     syncProjectIds: [],
     projectMapping: {},
-    addTags: []
+    addTags: [],
+    timeZone: 'Asia/Almaty'
 }

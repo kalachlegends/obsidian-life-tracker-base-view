@@ -27,6 +27,13 @@ src/
       capture-command.ts           # Property capture command (carousel)
       daily-capture-command.ts     # Daily capture command (all fields)
       thought-capture-command.ts   # Thought capture command
+      today-capture-command.ts     # Today's capture (auto-finds today's note)
+      today-daily-capture-command.ts # Today's daily capture - all fields (auto-finds today's note)
+      today-thought-command.ts     # Today's thought (auto-finds today's note)
+      today-utils.ts               # Shared utility to find today's daily note
+      sync-ticktick-command.ts     # Standalone TickTick sync for active file
+      sync-hcgateway-command.ts    # Standalone HCGateway sync for active file
+      analyze-note-command.ts      # AI analysis of active file's frontmatter
     services/
       date-anchor.service.ts       # Extract dates from entries (filename, properties)
       data-aggregation.service.ts  # Aggregate data for visualizations
@@ -154,6 +161,12 @@ All editors:
 - **Capture properties** (`capture-properties`): Carousel-style property capture with batch mode
 - **Daily capture** (`daily-capture`): Form-style modal showing all fields at once for the active note
 - **Capture thought** (`capture-thought`): Dedicated modal for quick thought capture, stores as list in frontmatter
+- **Today's capture** (`today-capture`): Auto-finds today's daily note in the configured folder, opens property capture carousel
+- **Today's daily capture** (`today-daily-capture`): Auto-finds today's daily note, opens form-style modal with all fields at once
+- **Today's thought** (`today-thought`): Auto-finds today's daily note in the configured folder, opens thought capture modal
+- **Sync TickTick data** (`sync-ticktick`): Fetches TickTick data for the active file's date and writes to frontmatter
+- **Sync Health Connect data** (`sync-hcgateway`): Fetches HCGateway health data for the active file's date and writes to frontmatter
+- **Analyze note with AI** (`analyze-note`): Reads frontmatter from the active file and sends to AI for analysis
 - **Generate weekly summary** (`weekly-summary`): Collects weekly data by tag/date range, computes averages, generates CSV, sends to AI for analysis
 
 ### Visualizations

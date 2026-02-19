@@ -114,14 +114,14 @@ function extractXP(task: ITask): number {
         }, 0)
     }
 
-    // Default XP based on priority
+    // Default XP based on priority: high=15, medium=10, low=5, none=1
     const priorityXP: Record<number, number> = {
-        0: 1, // none - default to 1
+        0: 1, // none
         1: 5, // low
         3: 10, // medium
         5: 15 // high
     }
-    return priorityXP[task.priority] || 1
+    return priorityXP[task.priority] ?? 1
 }
 
 /**
@@ -227,15 +227,32 @@ function isSprintTask(tags: string[]): { isSprint: boolean; sprintTag: string | 
 }
 
 /**
- * Format a TickTick date string to a short display format.
+ * Format a TickTick date string to a short display format in the given timezone.
  * Input: "2026-02-18T09:00:00.000+0000" or ISO string
  * Output: "2026-02-18 09:00" or "2026-02-18" (all-day)
+ *
+ * @param dateStr - Raw date string from TickTick API
+ * @param timeZone - Optional IANA timezone for display (falls back to UTC)
  */
-function formatTaskDate(dateStr: string | null): string | null {
+function formatTaskDate(dateStr: string | null, timeZone?: string): string | null {
     if (!dateStr) return null
     try {
         const d = new Date(dateStr)
         if (isNaN(d.getTime())) return null
+
+        if (timeZone) {
+            // Format in the specified timezone
+            const datePart = d.toLocaleDateString('en-CA', { timeZone }) // en-CA gives YYYY-MM-DD
+            const timePart = d.toLocaleTimeString('en-GB', {
+                timeZone,
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            })
+            return timePart === '00:00' ? datePart : `${datePart} ${timePart}`
+        }
+
+        // Fallback: UTC via toISOString
         const date = d.toISOString().substring(0, 10)
         const time = d.toISOString().substring(11, 16)
         // If time is midnight, it's likely an all-day task
@@ -248,7 +265,12 @@ function formatTaskDate(dateStr: string | null): string | null {
 /**
  * Build task text representation similar to Markdown parser
  */
-function buildTaskText(task: ITask, projectName: string, tags: string[]): string {
+function buildTaskText(
+    task: ITask,
+    projectName: string,
+    tags: string[],
+    timeZone?: string
+): string {
     let text = task.title
 
     // Add XP if not in title
@@ -272,8 +294,8 @@ function buildTaskText(task: ITask, projectName: string, tags: string[]): string
     }
 
     // Add date range (startDate -> dueDate)
-    const start = formatTaskDate(task.startDate)
-    const due = formatTaskDate(task.dueDate)
+    const start = formatTaskDate(task.startDate, timeZone)
+    const due = formatTaskDate(task.dueDate, timeZone)
     if (start && due) {
         text += ` [${start} → ${due}]`
     } else if (due) {
@@ -311,12 +333,14 @@ function getProjectName(projectId: string, projects: IProject[]): string {
  * @param tasks - Array of TickTick tasks (can be from completed or all tasks endpoint)
  * @param projects - Array of TickTick projects for name mapping
  * @param dateRange - Optional date range for filtering
+ * @param timeZone - Optional IANA timezone for date display and filtering
  * @returns ParserResult with the same structure as the existing Markdown parser
  */
 export function parseTickTickAPI(
     tasks: ITask[],
     projects: IProject[],
-    dateRange?: { from: string; to: string }
+    dateRange?: { from: string; to: string },
+    timeZone?: string
 ): TickTickParserResult {
     // Initialize result with same structure as Markdown parser
     const result: TickTickParserResult = {
@@ -404,7 +428,7 @@ export function parseTickTickAPI(
         const { isSprint, sprintTag } = isSprintTask(tags)
 
         // Build task text
-        const taskText = buildTaskText(task, projectName, tags)
+        const taskText = buildTaskText(task, projectName, tags, timeZone)
 
         // Distribute to appropriate arrays
         if (isWontDo) {
@@ -564,9 +588,19 @@ export function postProcessResult(result: TickTickParserResult): Record<string, 
     processedResult['summary'] = [...result.summary, ...result.projects]
 
     // Delete internal keys that shouldn't be in final frontmatter output.
-    // Note: sprint_tasks_done, sprint_tasks_undone, tasks_undone, habits_undone
-    // are intentionally kept so all undone data is available in reports.
-    const keysToDelete = ['date_parsed', 'habits_by_category', 'projects', 'summary']
+    // Undone task data is excluded from frontmatter but remains in the parser result
+    // for use in AI summary reports.
+    const keysToDelete = [
+        'date_parsed',
+        'habits_by_category',
+        'projects',
+        'summary',
+        'tasks_undone',
+        'sprint_tasks_undone',
+        'habits_undone',
+        'task_count_undone',
+        'total_habits_undone'
+    ]
 
     for (const key of keysToDelete) {
         delete processedResult[key]
@@ -582,8 +616,9 @@ export function postProcessResult(result: TickTickParserResult): Record<string, 
 export function parseTickTickTasks(
     tasks: ITask[],
     projects: IProject[],
-    dateRange?: { from: string; to: string }
+    dateRange?: { from: string; to: string },
+    timeZone?: string
 ): Record<string, unknown> {
-    const parsed = parseTickTickAPI(tasks, projects, dateRange)
+    const parsed = parseTickTickAPI(tasks, projects, dateRange, timeZone)
     return postProcessResult(parsed)
 }

@@ -5,15 +5,15 @@ export interface ProjectMapping {
     [tickTickProjectName: string]: string
 }
 
-// Fixed XP values based on priority
+// Default XP values based on priority: high=15, medium=10, low=5, none=1
 const PRIORITY_TO_XP: Record<number, number> = {
-    0: 5, // none
+    0: 1, // none
     1: 5, // low
-    3: 15, // medium
-    5: 25 // high
+    3: 10, // medium
+    5: 15 // high
 }
 
-const DEFAULT_XP = 5
+const DEFAULT_XP = 1
 
 export class TickTickToManualConverter {
     private projectMapping: ProjectMapping

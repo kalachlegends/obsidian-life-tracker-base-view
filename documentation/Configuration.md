@@ -4,12 +4,13 @@
 
 Stored in plugin data, applies to all views.
 
-| Setting                | Type                          | Default    | Description                                       |
-| ---------------------- | ----------------------------- | ---------- | ------------------------------------------------- |
-| `visualizationPresets` | PropertyVisualizationPreset[] | `[]`       | Auto-apply visualization by property name pattern |
-| `animationDuration`    | number                        | `3000`     | Chart animation duration (ms)                     |
-| `ai`                   | AISettings                    | (below)    | AI integration configuration                      |
-| `thoughtsPropertyName` | string                        | `thoughts` | Frontmatter property for quick thought capture    |
+| Setting                | Type                          | Default    | Description                                               |
+| ---------------------- | ----------------------------- | ---------- | --------------------------------------------------------- |
+| `visualizationPresets` | PropertyVisualizationPreset[] | `[]`       | Auto-apply visualization by property name pattern         |
+| `animationDuration`    | number                        | `3000`     | Chart animation duration (ms)                             |
+| `ai`                   | AISettings                    | (below)    | AI integration configuration                              |
+| `thoughtsPropertyName` | string                        | `thoughts` | Frontmatter property for quick thought capture            |
+| `dailyNotesFolder`     | string                        | `''`       | Folder where daily notes are located (empty = vault root) |
 
 ## Life Tracker View Options (Per-View)
 

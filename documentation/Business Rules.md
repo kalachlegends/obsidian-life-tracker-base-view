@@ -102,6 +102,19 @@ When the "Capture properties" command is invoked from a custom base view (Life T
 - Reference line colors match the dataset color for visual consistency
 - Default label format is "Target: {value}" if no custom label is provided
 
+## TickTick XP Defaults
+
+Default XP for tasks without an explicit `#Nxp` tag is derived from TickTick priority: high (5) = 15xp, medium (3) = 10xp, low (1) = 5xp, none (0) = 1xp. This mapping is unified across DirectParser, ToManualConverter, and SyncService.
+
+## TickTick Undone Tasks in Frontmatter
+
+Undone task fields (`tasks_undone`, `sprint_tasks_undone`, `habits_undone`, `task_count_undone`, `total_habits_undone`) are excluded from frontmatter output. They remain in the parser result for use in AI summary reports.
+
+## TickTick Timezone
+
+- Task date/time display uses a configurable IANA timezone (default: `Asia/Almaty`). `formatTaskDate` converts TickTick UTC timestamps to the user's timezone for frontmatter output (e.g., `[2026-02-19 12:15 → 2026-02-19 13:30]` instead of UTC `[2026-02-19 07:15 → 2026-02-19 08:30]`).
+- The timezone setting does not affect the TickTick API query format (which uses naive datetime strings interpreted server-side).
+
 ## TickTick Credential Security
 
 - The TickTick password MUST NEVER be persisted to disk (plugin settings / `data.json`). It is held in memory only during the settings session and used solely to obtain an auth token.
@@ -118,7 +131,7 @@ When the "Capture properties" command is invoked from a custom base view (Life T
 - The "Generate daily summary" command scans vault files for a single day (today or yesterday), filters by tag, computes numeric averages, builds CSV data, and sends everything to the AI. Configured independently (tag, date range, prompt).
 - The "Generate weekly summary" command scans vault files, filters by tag and date range, computes numeric averages, builds CSV data, and sends everything to the AI.
 - The "Generate monthly summary" command works identically to weekly but uses calendar month boundaries (1st to last day). Configured independently (tag, date range, prompt).
-- All summary reports (daily, weekly, monthly) include a dedicated "Undone tasks" section that highlights `tasks_undone`, `sprint_tasks_undone`, `habits_undone`, and their counts when present in note frontmatter.
+- All summary reports (daily, weekly, monthly) include a dedicated "Undone tasks" section sourced from the parser result (not frontmatter, since undone fields are excluded from frontmatter output).
 - Custom system prompts override defaults; empty prompt fields fall back to built-in defaults.
 - All AI network calls use Obsidian's `requestUrl` API for CORS-safe requests.
 - The daily summary date range defaults to "today". Users can change to "yesterday" in settings.
@@ -144,18 +157,21 @@ When the "Capture properties" command is invoked from a custom base view (Life T
 - Fetched values are aggregated per data type (sum for steps/distance/calories, average for heart rate/temperature, latest for weight/height, duration for sleep) and written as frontmatter properties.
 - Property names follow the pattern `{prefix}_{snake_case_type}` (e.g., `health_heart_rate`, `health_steps`).
 - Every error (login, fetch, write) is shown to the user via Notice.
+- Date boundary queries use a configurable IANA timezone (default: `Asia/Almaty`). The timezone offset is appended to all datetime query strings to ensure correct day boundaries regardless of the runtime environment.
 
 ## AI Report Saving
 
-- The AI analysis modal includes a "Save to note" button that creates a markdown note in the "Life Tracker Reports" folder.
-- The folder is auto-created if it does not exist.
-- File naming format: `YYYY-MM-DD - {sanitized title}.md`. Re-running for the same period overwrites the existing file.
-- The saved note includes a metadata header with generation date, provider, and model info.
-- Auto-save to note is enabled by default. When enabled, reports are automatically saved to a note after AI generation (in addition to showing the modal). This can be toggled in Settings → Life Tracker → Integrations → Report saving.
+- The AI analysis modal includes a "Save to note" button. The default behavior appends the report content (with a heading) to the end of the currently active/open file.
+- Optionally, reports can also be saved to a dedicated folder as separate notes. This is controlled by the "Also save reports to folder" toggle (disabled by default). The folder path is configurable (default: "Life Tracker Reports").
+- When folder saving is enabled: the folder is auto-created if it does not exist; file naming format is `YYYY-MM-DD - {sanitized title}.md`; re-running for the same period overwrites the existing file.
+- The saved content includes a metadata blockquote with generation date, provider, and model info.
+- Auto-save to current note is enabled by default. When enabled, reports are automatically appended to the active file after AI generation (in addition to showing the modal). This can be toggled in Settings → Life Tracker → Integrations → Report saving.
+- The active file is captured at modal creation time to avoid issues with focus changes.
 
 ## Thoughts Capture
 
 - Thoughts are stored as a frontmatter list property (configurable name, default: `thoughts`).
-- The "Capture thought" command appends to the list; each entry is a string.
+- The "Capture thought" command appends to the list; each entry is a string prefixed with `[HH:mm]` timestamp (e.g., `[14:32] Some thought`).
+- The UI parses the timestamp prefix and displays it as a separate styled badge. Legacy thoughts without a timestamp fall back to a numeric index badge.
 - Removing all thoughts clears the property from frontmatter.
 - The property name is configured in Settings -> Life Tracker -> Property definitions tab.

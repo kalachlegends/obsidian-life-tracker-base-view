@@ -76,6 +76,13 @@ export interface PluginSettings {
      * The "Capture thought" command appends entries to this list property.
      */
     thoughtsPropertyName: string
+
+    /**
+     * Folder path where daily notes are located.
+     * Used by "Today's capture" and "Today's thought" commands to find today's note.
+     * Empty string means vault root.
+     */
+    dailyNotesFolder: string
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
@@ -86,5 +93,6 @@ export const DEFAULT_SETTINGS: PluginSettings = {
     ticktick: DEFAULT_TICKTICK_SETTINGS,
     ai: DEFAULT_AI_SETTINGS,
     hcgateway: DEFAULT_HCGATEWAY_SETTINGS,
-    thoughtsPropertyName: 'thoughts'
+    thoughtsPropertyName: 'thoughts',
+    dailyNotesFolder: ''
 }

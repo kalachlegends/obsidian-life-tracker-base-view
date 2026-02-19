@@ -151,6 +151,23 @@ export class LifeTrackerPluginSettingTab extends PluginSettingTab {
                     })
             })
 
+        // Daily notes folder
+        new Setting(containerEl)
+            .setName('Daily notes folder')
+            .setDesc(
+                'Folder where daily notes are located. Used by "Today\'s capture" and "Today\'s thought" commands. Leave empty for vault root.'
+            )
+            .addText((text) => {
+                text.setPlaceholder('e.g., Daily Notes')
+                    .setValue(this.plugin.settings.dailyNotesFolder)
+                    .onChange(async (value) => {
+                        await this.plugin.updateSettings((draft) => {
+                            draft.dailyNotesFolder = value.trim()
+                        })
+                    })
+                new FolderSuggest(text.inputEl, this.app)
+            })
+
         // Separator
         containerEl.createEl('hr', { cls: 'lt-settings-separator' })
 
@@ -1311,6 +1328,22 @@ export class LifeTrackerPluginSettingTab extends PluginSettingTab {
                         })
                 })
 
+            // Timezone
+            new Setting(containerEl)
+                .setName('Timezone')
+                .setDesc(
+                    'IANA timezone for task date display (e.g., "Asia/Almaty", "Europe/London"). Task times in frontmatter will be shown in this timezone.'
+                )
+                .addText((text) => {
+                    text.setPlaceholder('Asia/Almaty')
+                        .setValue(this.plugin.settings.ticktick.timeZone)
+                        .onChange(async (value) => {
+                            await this.plugin.updateSettings((draft) => {
+                                draft.ticktick.timeZone = value.trim() || 'Asia/Almaty'
+                            })
+                        })
+                })
+
             // Test Connection Button
             new Setting(containerEl)
                 .setName('Connection')
@@ -1671,9 +1704,9 @@ export class LifeTrackerPluginSettingTab extends PluginSettingTab {
         new Setting(containerEl).setName('Report saving').setHeading()
 
         new Setting(containerEl)
-            .setName('Auto-save reports to note')
+            .setName('Auto-save reports to current note')
             .setDesc(
-                'Automatically save AI-generated reports (daily, weekly, monthly) to a note in the "Life Tracker Reports" folder.'
+                'Automatically append AI-generated reports to the currently open note when generated. The report is added at the end of the file.'
             )
             .addToggle((toggle) => {
                 toggle.setValue(this.plugin.settings.ai.autoSaveToNote).onChange(async (value) => {
@@ -1685,6 +1718,40 @@ export class LifeTrackerPluginSettingTab extends PluginSettingTab {
                     )
                 })
             })
+
+        new Setting(containerEl)
+            .setName('Also save reports to folder')
+            .setDesc('Additionally save each AI report as a separate note in a dedicated folder.')
+            .addToggle((toggle) => {
+                toggle.setValue(this.plugin.settings.ai.saveToFolder).onChange(async (value) => {
+                    await this.plugin.updateSettings(
+                        (draft) => {
+                            draft.ai.saveToFolder = value
+                        },
+                        { type: 'ai-settings-changed' }
+                    )
+                    // Re-render to show/hide folder path setting
+                    this.display()
+                })
+            })
+
+        if (this.plugin.settings.ai.saveToFolder) {
+            new Setting(containerEl)
+                .setName('Reports folder path')
+                .setDesc('Folder where separate report notes are saved.')
+                .addText((text) => {
+                    text.setPlaceholder('Life Tracker Reports')
+                        .setValue(this.plugin.settings.ai.reportFolderPath)
+                        .onChange(async (value) => {
+                            await this.plugin.updateSettings(
+                                (draft) => {
+                                    draft.ai.reportFolderPath = value
+                                },
+                                { type: 'ai-settings-changed' }
+                            )
+                        })
+                })
+        }
 
         // Separator
         containerEl.createEl('hr', { cls: 'lt-settings-separator' })
@@ -2145,6 +2212,22 @@ export class LifeTrackerPluginSettingTab extends PluginSettingTab {
                     .onChange(async (value) => {
                         await this.plugin.updateSettings((draft) => {
                             draft.hcgateway.propertyPrefix = value.trim()
+                        })
+                    })
+            })
+
+        // Timezone
+        new Setting(containerEl)
+            .setName('Timezone')
+            .setDesc(
+                'IANA timezone for date boundary queries (e.g., "Asia/Almaty", "Europe/London"). Ensures correct day boundaries when fetching health data.'
+            )
+            .addText((text) => {
+                text.setPlaceholder('Asia/Almaty')
+                    .setValue(this.plugin.settings.hcgateway.timeZone)
+                    .onChange(async (value) => {
+                        await this.plugin.updateSettings((draft) => {
+                            draft.hcgateway.timeZone = value.trim() || 'Asia/Almaty'
                         })
                     })
             })
