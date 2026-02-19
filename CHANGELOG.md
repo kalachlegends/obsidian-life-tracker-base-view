@@ -1,3 +1,8 @@
+## [1.2.8](https://github.com/dsebastien/obsidian-life-tracker-base-view/compare/1.2.7...1.2.8) (2026-02-19)
+
+### Features
+
+* toady thougfht today capturehuy ([81b2b94](https://github.com/dsebastien/obsidian-life-tracker-base-view/commit/81b2b94dc1383163d04a19ed8af6ef20705d809e))
 ## [1.2.7](https://github.com/dsebastien/obsidian-life-tracker-base-view/compare/1.2.5...1.2.7) (2026-02-18)
 
 ### Features
