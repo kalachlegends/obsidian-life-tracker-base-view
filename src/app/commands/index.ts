@@ -8,9 +8,7 @@ import { registerTodayThoughtCommand } from './today-thought-command'
 import { registerSyncTickTickCommand } from './sync-ticktick-command'
 import { registerSyncHCGatewayCommand } from './sync-hcgateway-command'
 import { registerAnalyzeNoteCommand } from './analyze-note-command'
-import { registerDailySummaryCommand } from './daily-summary-command'
-import { registerWeeklySummaryCommand } from './weekly-summary-command'
-import { registerMonthlySummaryCommand } from './monthly-summary-command'
+import { registerSummaryCommand } from './summary-command'
 
 /**
  * Register all plugin commands
@@ -32,7 +30,5 @@ export function registerCommands(plugin: LifeTrackerPlugin): void {
 
     // AI commands
     registerAnalyzeNoteCommand(plugin)
-    registerDailySummaryCommand(plugin)
-    registerWeeklySummaryCommand(plugin)
-    registerMonthlySummaryCommand(plugin)
+    registerSummaryCommand(plugin)
 }

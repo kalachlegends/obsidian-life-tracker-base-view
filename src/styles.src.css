@@ -3924,3 +3924,62 @@
         @apply w-full text-center py-3;
     }
 }
+
+/* ── Summary modal form ─────────────────────────────── */
+
+.lt-summary-form {
+    @apply flex flex-col gap-4;
+}
+
+.lt-summary-field {
+    @apply flex flex-col gap-1.5;
+}
+
+.lt-summary-label {
+    @apply text-xs font-medium;
+    color: var(--text-muted);
+}
+
+.lt-summary-label--end {
+    @apply mt-2;
+}
+
+.lt-summary-select {
+    @apply w-full;
+}
+
+.lt-summary-date-input {
+    @apply w-full px-3 py-2 rounded text-sm;
+    background-color: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    color: var(--text-normal);
+}
+
+.lt-summary-date-input:focus {
+    border-color: var(--interactive-accent);
+    outline: none;
+}
+
+.lt-summary-form-actions {
+    @apply flex justify-end mt-2;
+}
+
+.lt-summary-actions-spacer {
+    @apply flex-1;
+}
+
+.lt-summary-result.hidden,
+.lt-summary-form.hidden {
+    @apply hidden;
+}
+
+/* Responsive summary form */
+@media (max-width: 520px) {
+    .lt-summary-form-actions {
+        @apply flex-col;
+    }
+
+    .lt-summary-form-actions button {
+        @apply w-full text-center py-3;
+    }
+}

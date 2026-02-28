@@ -77,7 +77,7 @@ export class AIAnalysisModal extends Modal {
         // Save to note button
         const saveBtn = actionsEl.createEl('button', {
             cls: 'lt-ai-analysis-btn',
-            text: 'Save to note'
+            text: 'Save note to current'
         })
         saveBtn.addEventListener('click', () => {
             void this.saveToNote()
