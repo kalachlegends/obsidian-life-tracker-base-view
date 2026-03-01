@@ -1,3 +1,9 @@
+## [1.2.10](https://github.com/dsebastien/obsidian-life-tracker-base-view/compare/1.2.8...1.2.10) (2026-03-01)
+
+### Features
+
+* ai analysis modal ([e8f8050](https://github.com/dsebastien/obsidian-life-tracker-base-view/commit/e8f8050b90e9bed6837da180aa6833b11aa53e4c))
+* daily notes + calories tracker ([dc5cb78](https://github.com/dsebastien/obsidian-life-tracker-base-view/commit/dc5cb7898ed73f074e7f5b9ee464742f1810cb1f))
 ## [1.2.8](https://github.com/dsebastien/obsidian-life-tracker-base-view/compare/1.2.7...1.2.8) (2026-02-19)
 
 ### Features
