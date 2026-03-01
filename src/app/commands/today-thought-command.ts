@@ -1,21 +1,22 @@
 import type { LifeTrackerPlugin } from '../plugin'
 import { ThoughtsModal } from '../components/modals/thoughts-modal'
-import { findTodaysNote } from './today-utils'
+import { findOrCreateTodaysNote } from './today-utils'
 
 /**
  * Register the "today's thought" command.
- * Finds today's daily note (by YYYY-MM-DD filename in the configured folder)
- * and opens the thoughts capture modal on it.
+ * Finds (or auto-creates) today's daily note and opens the thoughts capture
+ * modal on it.
  */
 export function registerTodayThoughtCommand(plugin: LifeTrackerPlugin): void {
     plugin.addCommand({
         id: 'today-thought',
         name: "Today's thought",
         callback: () => {
-            const file = findTodaysNote(plugin)
-            if (!file) return
+            void findOrCreateTodaysNote(plugin).then((file) => {
+                if (!file) return
 
-            new ThoughtsModal(plugin, file).open()
+                new ThoughtsModal(plugin, file).open()
+            })
         }
     })
 }

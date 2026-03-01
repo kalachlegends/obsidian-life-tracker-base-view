@@ -168,6 +168,73 @@ export class LifeTrackerPluginSettingTab extends PluginSettingTab {
                 new FolderSuggest(text.inputEl, this.app)
             })
 
+        // Auto-create daily note
+        new Setting(containerEl)
+            .setName('Auto-create daily note')
+            .setDesc(
+                "Automatically create today's daily note when it doesn't exist. Uses the core Daily Notes plugin template if configured."
+            )
+            .addToggle((toggle) => {
+                toggle
+                    .setValue(this.plugin.settings.autoCreateDailyNote)
+                    .onChange(async (value) => {
+                        await this.plugin.updateSettings((draft) => {
+                            draft.autoCreateDailyNote = value
+                        })
+                    })
+            })
+
+        // Meals property name
+        new Setting(containerEl)
+            .setName('Meals property name')
+            .setDesc(
+                'Frontmatter property used to store meal entries as a list. Each entry includes time, name, and nutrition data.'
+            )
+            .addText((text) => {
+                text.setPlaceholder('meals')
+                    .setValue(this.plugin.settings.mealsPropertyName)
+                    .onChange(async (value) => {
+                        await this.plugin.updateSettings((draft) => {
+                            draft.mealsPropertyName = value.trim() || 'meals'
+                        })
+                    })
+            })
+
+        // Nutrition property prefix
+        new Setting(containerEl)
+            .setName('Nutrition property prefix')
+            .setDesc(
+                'Prefix for aggregated nutrition properties (e.g., nutrition_calories, nutrition_protein). These are auto-calculated from meal entries.'
+            )
+            .addText((text) => {
+                text.setPlaceholder('nutrition')
+                    .setValue(this.plugin.settings.nutritionPropertyPrefix)
+                    .onChange(async (value) => {
+                        await this.plugin.updateSettings((draft) => {
+                            draft.nutritionPropertyPrefix = value.trim() || 'nutrition'
+                        })
+                    })
+            })
+
+        // Custom meal analysis prompt
+        new Setting(containerEl)
+            .setName('Food analysis prompt')
+            .setDesc(
+                'Custom system prompt for AI food image analysis. Leave empty to use the default prompt. Requires AI integration to be enabled.'
+            )
+            .addTextArea((textarea) => {
+                textarea
+                    .setPlaceholder('Leave empty for default prompt...')
+                    .setValue(this.plugin.settings.mealAnalysisPrompt)
+                    .onChange(async (value) => {
+                        await this.plugin.updateSettings((draft) => {
+                            draft.mealAnalysisPrompt = value
+                        })
+                    })
+                textarea.inputEl.rows = 4
+                textarea.inputEl.addClass('lt-settings-textarea')
+            })
+
         // Separator
         containerEl.createEl('hr', { cls: 'lt-settings-separator' })
 

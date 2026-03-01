@@ -1,11 +1,12 @@
 import { Notice } from 'obsidian'
 import type { LifeTrackerPlugin } from '../plugin'
 import { DailyNoteModal } from '../components/modals/daily-note-modal'
-import { findTodaysNote } from './today-utils'
+import { findOrCreateTodaysNote } from './today-utils'
 
 /**
  * Register the "today's daily capture" command.
- * Finds today's daily note and opens a form-style modal showing all property fields at once.
+ * Finds (or auto-creates) today's daily note and opens a form-style modal
+ * showing all property fields at once.
  */
 export function registerTodayDailyCaptureCommand(plugin: LifeTrackerPlugin): void {
     plugin.addCommand({
@@ -19,10 +20,11 @@ export function registerTodayDailyCaptureCommand(plugin: LifeTrackerPlugin): voi
                 return
             }
 
-            const file = findTodaysNote(plugin)
-            if (!file) return
+            void findOrCreateTodaysNote(plugin).then((file) => {
+                if (!file) return
 
-            new DailyNoteModal(plugin, file).open()
+                new DailyNoteModal(plugin, file).open()
+            })
         }
     })
 }

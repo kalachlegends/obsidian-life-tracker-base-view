@@ -1,12 +1,12 @@
 import { Notice } from 'obsidian'
 import type { LifeTrackerPlugin } from '../plugin'
 import { PropertyCaptureModal } from '../components/modals/property-capture-modal'
-import { findTodaysNote } from './today-utils'
+import { findOrCreateTodaysNote } from './today-utils'
 
 /**
  * Register the "today's capture" command.
- * Finds today's daily note (by YYYY-MM-DD filename in the configured folder)
- * and opens the property capture carousel on it.
+ * Finds (or auto-creates) today's daily note and opens the property capture
+ * carousel on it.
  */
 export function registerTodayCaptureCommand(plugin: LifeTrackerPlugin): void {
     plugin.addCommand({
@@ -20,13 +20,14 @@ export function registerTodayCaptureCommand(plugin: LifeTrackerPlugin): void {
                 return
             }
 
-            const file = findTodaysNote(plugin)
-            if (!file) return
+            void findOrCreateTodaysNote(plugin).then((file) => {
+                if (!file) return
 
-            new PropertyCaptureModal(plugin, {
-                mode: 'single-note',
-                file
-            }).open()
+                new PropertyCaptureModal(plugin, {
+                    mode: 'single-note',
+                    file
+                }).open()
+            })
         }
     })
 }

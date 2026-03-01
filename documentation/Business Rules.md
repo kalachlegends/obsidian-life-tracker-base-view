@@ -175,3 +175,18 @@ Undone task fields (`tasks_undone`, `sprint_tasks_undone`, `habits_undone`, `tas
 - The UI parses the timestamp prefix and displays it as a separate styled badge. Legacy thoughts without a timestamp fall back to a numeric index badge.
 - Removing all thoughts clears the property from frontmatter.
 - The property name is configured in Settings -> Life Tracker -> Property definitions tab.
+
+## Meal / Calorie Tracking
+
+- Meal tracking uses the existing AI provider configuration (OpenAI or OpenRouter). No separate API key needed.
+- Meals are stored as a frontmatter list property (configurable name, default: `meals`). Format: `[HH:mm] Name | cal:N p:N c:N f:N`.
+- After each meal add/remove, aggregated nutrition properties (`{prefix}_calories`, `{prefix}_protein`, `{prefix}_carbs`, `{prefix}_fat`) are recalculated and written to frontmatter. These are standard numeric properties compatible with all visualizations.
+- AI food image analysis uses the user's configured AI provider with vision (multimodal) support. Image detail level is `low` to minimize token cost.
+- If the AI cannot identify food, it returns "Unknown" and the user can enter data manually.
+- Manual meal entry is always available regardless of AI configuration.
+
+## Auto-Create Daily Notes
+
+- When `autoCreateDailyNote` is enabled (default: `true`), `today-*` commands auto-create today's daily note if it doesn't exist.
+- Template resolution reads the core Daily Notes plugin configuration (folder, template, date format) via `app.internalPlugins`. Falls back to Life Tracker's `dailyNotesFolder` setting with `YYYY-MM-DD` format and no template if core plugin is not enabled.
+- Template variable substitution supports: `{{date}}`, `{{time}}`, `{{title}}`.

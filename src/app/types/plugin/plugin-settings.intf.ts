@@ -83,6 +83,30 @@ export interface PluginSettings {
      * Empty string means vault root.
      */
     dailyNotesFolder: string
+
+    /**
+     * Frontmatter property name used for storing meal entries.
+     * Each meal is stored as a string: "[HH:mm] Name | cal:N p:N c:N f:N"
+     */
+    mealsPropertyName: string
+
+    /**
+     * Prefix for aggregated nutrition frontmatter properties.
+     * Generates: {prefix}_calories, {prefix}_protein, {prefix}_carbs, {prefix}_fat
+     */
+    nutritionPropertyPrefix: string
+
+    /**
+     * Whether to auto-create today's daily note when it doesn't exist.
+     * Reads the core Daily Notes plugin config for folder, template, and date format.
+     */
+    autoCreateDailyNote: boolean
+
+    /**
+     * Custom system prompt for AI food image analysis.
+     * Empty string uses the built-in default prompt.
+     */
+    mealAnalysisPrompt: string
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
@@ -94,5 +118,9 @@ export const DEFAULT_SETTINGS: PluginSettings = {
     ai: DEFAULT_AI_SETTINGS,
     hcgateway: DEFAULT_HCGATEWAY_SETTINGS,
     thoughtsPropertyName: 'thoughts',
-    dailyNotesFolder: ''
+    dailyNotesFolder: '',
+    mealsPropertyName: 'meals',
+    nutritionPropertyPrefix: 'nutrition',
+    autoCreateDailyNote: true,
+    mealAnalysisPrompt: ''
 }

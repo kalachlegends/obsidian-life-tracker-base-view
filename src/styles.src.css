@@ -3221,6 +3221,348 @@
 }
 
 /* ========================================
+   MEAL CAPTURE MODAL
+   ======================================== */
+
+.lt-meal-modal {
+    @apply p-0 overflow-hidden;
+    max-width: min(520px, calc(100vw - 32px));
+    min-width: min(400px, calc(100vw - 32px));
+}
+
+.lt-meal-modal .modal-content {
+    @apply p-0 overflow-y-auto;
+    max-height: 80vh;
+}
+
+.lt-meal-container {
+    @apply flex flex-col p-8;
+}
+
+.lt-meal-title {
+    @apply text-xl font-bold text-center mb-1 tracking-tight;
+    color: var(--text-normal);
+}
+
+.lt-meal-property-hint {
+    @apply text-xs text-center mb-5;
+    color: var(--text-faint);
+}
+
+/* Meals list */
+.lt-meal-list {
+    @apply flex flex-col gap-2 mb-4;
+}
+
+.lt-meal-empty {
+    @apply text-sm text-center py-6;
+    color: var(--text-muted);
+}
+
+.lt-meal-item {
+    @apply relative rounded-lg p-3 border transition-all duration-150;
+    background-color: var(--background-secondary);
+    border-color: var(--background-modifier-border);
+}
+
+.lt-meal-item:hover {
+    border-color: var(--text-muted);
+}
+
+.lt-meal-item-header {
+    @apply flex items-center gap-2 mb-1;
+}
+
+.lt-meal-item-time {
+    @apply flex-shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold leading-none;
+    background-color: var(--background-primary-alt);
+    color: var(--text-muted);
+    font-family: var(--font-monospace);
+}
+
+.lt-meal-item-name {
+    @apply text-sm font-medium;
+    color: var(--text-normal);
+}
+
+.lt-meal-item-raw {
+    @apply text-sm italic;
+    color: var(--text-muted);
+}
+
+.lt-meal-item-macros {
+    @apply flex items-center gap-3 ml-8 text-xs;
+    color: var(--text-muted);
+}
+
+.lt-meal-item-calories {
+    @apply font-semibold;
+    color: var(--text-accent);
+}
+
+.lt-meal-item-macro {
+    color: var(--text-faint);
+}
+
+.lt-meal-item-delete {
+    @apply absolute top-2 right-2 w-5 h-5 flex items-center justify-center rounded-full cursor-pointer;
+    @apply transition-all duration-150 text-sm leading-none;
+    background-color: transparent;
+    color: var(--text-muted);
+    border: none;
+    opacity: 0.5;
+}
+
+.lt-meal-item-delete:hover {
+    background-color: rgba(255, 100, 100, 0.15);
+    color: var(--text-error);
+    opacity: 1;
+}
+
+/* Daily totals */
+.lt-meal-totals {
+    @apply text-center py-3 mb-4 rounded-lg border;
+    background-color: var(--background-primary-alt);
+    border-color: var(--background-modifier-border);
+}
+
+.lt-meal-totals-calories {
+    @apply text-lg font-bold mb-1;
+    color: var(--text-normal);
+}
+
+.lt-meal-totals-macros {
+    @apply flex items-center justify-center gap-4 text-sm;
+    color: var(--text-muted);
+}
+
+/* Action buttons */
+.lt-meal-actions {
+    @apply flex items-center gap-3 justify-center;
+}
+
+.lt-meal-action-btn {
+    @apply px-5 py-2.5 rounded-lg font-semibold cursor-pointer text-sm;
+    @apply transition-all duration-150;
+    background-color: var(--interactive-normal);
+    color: var(--text-normal);
+    border: 1px solid var(--background-modifier-border);
+}
+
+.lt-meal-action-btn:hover {
+    background-color: var(--interactive-hover);
+}
+
+.lt-meal-action-btn-primary {
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-color: transparent;
+}
+
+.lt-meal-action-btn-primary:hover {
+    @apply scale-[1.02];
+    background-color: var(--interactive-accent-hover, var(--interactive-accent));
+}
+
+/* Manual entry form */
+.lt-meal-form {
+    @apply flex flex-col gap-3 mb-5;
+}
+
+.lt-meal-form-field {
+    @apply flex flex-col gap-1;
+}
+
+.lt-meal-form-label {
+    @apply text-sm font-medium;
+    color: var(--text-muted);
+}
+
+.lt-meal-form-input {
+    @apply w-full px-3 py-2 text-sm rounded-lg border transition-all duration-150;
+    background-color: var(--background-primary);
+    border-color: var(--background-modifier-border);
+    color: var(--text-normal);
+}
+
+.lt-meal-form-input:focus {
+    border-color: var(--interactive-accent);
+    outline: none;
+}
+
+.lt-meal-form-buttons {
+    @apply flex items-center gap-3 justify-end;
+}
+
+/* Image analysis */
+.lt-meal-dropzone {
+    @apply flex items-center justify-center rounded-lg border-2 border-dashed p-8 mb-4 cursor-pointer;
+    @apply transition-all duration-150;
+    border-color: var(--background-modifier-border);
+    min-height: 120px;
+}
+
+.lt-meal-dropzone:hover {
+    border-color: var(--interactive-accent);
+    background-color: var(--background-primary-alt);
+}
+
+.lt-meal-dropzone-active {
+    border-color: var(--interactive-accent);
+    background-color: var(--background-primary-alt);
+}
+
+.lt-meal-dropzone-text {
+    @apply text-sm text-center;
+    color: var(--text-muted);
+}
+
+/* Analysis results list (multi-image) */
+.lt-meal-analysis-results {
+    @apply flex flex-col gap-2 mt-3;
+    max-height: 350px;
+    overflow-y: auto;
+}
+
+.lt-meal-analysis-card {
+    @apply rounded-lg p-3 border;
+    background-color: var(--background-secondary);
+    border-color: var(--background-modifier-border);
+}
+
+.lt-meal-analysis-card--analyzing {
+    @apply opacity-70;
+    border-color: var(--text-accent);
+}
+
+.lt-meal-analysis-card--accepted {
+    @apply opacity-60;
+    border-color: var(--color-green);
+}
+
+.lt-meal-analysis-card--error {
+    border-color: var(--text-error);
+}
+
+.lt-meal-analysis-card-header {
+    @apply flex items-center justify-between gap-2 mb-1;
+}
+
+.lt-meal-analysis-card-name {
+    @apply text-xs font-medium truncate;
+    color: var(--text-muted);
+}
+
+.lt-meal-analysis-card-status {
+    @apply text-xs;
+    color: var(--text-accent);
+}
+
+.lt-meal-analysis-card--accepted .lt-meal-analysis-card-status {
+    color: var(--color-green);
+}
+
+.lt-meal-analysis-card-info {
+    @apply flex items-center justify-between gap-2;
+}
+
+.lt-meal-analysis-card-meal-name {
+    @apply text-sm font-semibold;
+    color: var(--text-normal);
+}
+
+.lt-meal-analysis-card-macros {
+    @apply flex items-center gap-2 text-xs;
+    color: var(--text-muted);
+}
+
+.lt-meal-analysis-card-error {
+    @apply text-xs;
+    color: var(--text-error);
+}
+
+.lt-meal-analysis-card-raw {
+    @apply text-xs mt-1;
+    color: var(--text-faint);
+}
+
+.lt-meal-analysis-card-raw pre {
+    @apply mt-1 p-2 rounded text-xs overflow-x-auto;
+    background-color: var(--background-primary-alt);
+    font-family: var(--font-monospace);
+}
+
+.lt-meal-analysis-card-actions {
+    @apply flex items-center gap-2 mt-2 justify-end;
+}
+
+/* Bottom actions bar */
+.lt-meal-analysis-bottom {
+    @apply flex items-center gap-3 mt-3;
+}
+
+.lt-meal-analysis-progress {
+    @apply text-xs;
+    color: var(--text-accent);
+}
+
+.lt-meal-accept-all {
+    @apply ml-auto;
+}
+
+.lt-meal-back-btn {
+    @apply px-4 py-2 rounded-lg text-sm cursor-pointer;
+    @apply transition-all duration-150;
+    background-color: var(--interactive-normal);
+    color: var(--text-normal);
+    border: 1px solid var(--background-modifier-border);
+}
+
+.lt-meal-back-btn:hover {
+    background-color: var(--interactive-hover);
+}
+
+/* Mobile adjustments */
+@media (max-width: 480px) {
+    .lt-meal-modal {
+        @apply fixed inset-0 min-w-0 max-w-none rounded-none z-[1000];
+        width: 100vw !important;
+        height: 100vh !important;
+        max-height: 100vh !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        background-color: var(--background-primary) !important;
+    }
+
+    .lt-meal-modal .modal-content {
+        @apply h-full w-full overflow-y-auto p-0;
+        max-height: 100vh;
+    }
+
+    .lt-meal-container {
+        @apply p-4;
+    }
+
+    .lt-meal-title {
+        @apply text-lg;
+    }
+}
+
+/* ========================================
+   DAILY NOTE SUGGEST MODAL
+   ======================================== */
+
+.lt-suggest-create {
+    color: var(--text-accent);
+    font-weight: 600;
+}
+
+.lt-suggest-today {
+    font-weight: 600;
+}
+
+/* ========================================
    PROPERTY SELECTION MODAL (Overlay)
    ======================================== */
 

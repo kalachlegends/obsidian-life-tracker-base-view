@@ -11,13 +11,23 @@ const DEFAULT_BASE_URLS: Record<AIProviderType, string> = {
 }
 
 /**
+ * Content part for multimodal messages (text + image)
+ */
+type TextContentPart = { type: 'text'; text: string }
+type ImageContentPart = {
+    type: 'image_url'
+    image_url: { url: string; detail?: 'low' | 'high' | 'auto' }
+}
+type MessageContent = string | Array<TextContentPart | ImageContentPart>
+
+/**
  * OpenAI-compatible chat completion request body
  */
 interface ChatCompletionRequest {
     model: string
     messages: Array<{
         role: 'system' | 'user' | 'assistant'
-        content: string
+        content: MessageContent
     }>
     temperature?: number
     max_tokens?: number
@@ -161,6 +171,106 @@ export class AIService {
                 success: false,
                 content: '',
                 error: `AI request error: ${errorMessage}`,
+                provider: this.config.type,
+                model: this.config.model
+            }
+        }
+    }
+
+    /**
+     * Send a multimodal chat completion request with an image.
+     * Uses the same OpenAI-compatible API with array-of-parts content format.
+     * Both OpenAI and OpenRouter support this format for vision-capable models.
+     */
+    async analyzeWithImage(
+        systemPrompt: string,
+        userMessage: string,
+        imageBase64: string,
+        mimeType: string
+    ): Promise<AIAnalysisResult> {
+        if (!this.config.apiKey) {
+            return {
+                success: false,
+                content: '',
+                error: 'API key is not configured',
+                provider: this.config.type,
+                model: this.config.model
+            }
+        }
+
+        const baseUrl = this.getBaseUrl()
+        const url = `${baseUrl}/chat/completions`
+
+        const body: ChatCompletionRequest = {
+            model: this.config.model,
+            messages: [
+                { role: 'system', content: systemPrompt },
+                {
+                    role: 'user',
+                    content: [
+                        { type: 'text', text: userMessage },
+                        {
+                            type: 'image_url',
+                            image_url: {
+                                url: `data:${mimeType};base64,${imageBase64}`,
+                                detail: 'low'
+                            }
+                        }
+                    ]
+                }
+            ],
+            temperature: 0.7,
+            max_tokens: 2000
+        }
+
+        try {
+            log(`AI vision request to ${this.config.type}/${this.config.model}`, 'debug')
+
+            const response = await requestUrl({
+                url,
+                method: 'POST',
+                headers: this.getHeaders(),
+                body: JSON.stringify(body),
+                throw: false
+            })
+
+            if (response.status !== 200) {
+                const errorBody = response.json as Record<string, unknown> | undefined
+                const errorObj = errorBody?.['error'] as Record<string, unknown> | undefined
+                const errorMessage = errorObj?.['message'] ?? `HTTP ${response.status}`
+                log(`AI vision request failed: ${String(errorMessage)}`, 'error')
+                return {
+                    success: false,
+                    content: '',
+                    error: `AI vision request failed: ${String(errorMessage)}`,
+                    provider: this.config.type,
+                    model: this.config.model
+                }
+            }
+
+            const data = response.json as ChatCompletionResponse
+            const content = data.choices[0]?.message?.content ?? ''
+
+            return {
+                success: true,
+                content,
+                provider: this.config.type,
+                model: this.config.model,
+                usage: data.usage
+                    ? {
+                          promptTokens: data.usage.prompt_tokens,
+                          completionTokens: data.usage.completion_tokens,
+                          totalTokens: data.usage.total_tokens
+                      }
+                    : undefined
+            }
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+            log(`AI vision request error: ${errorMessage}`, 'error')
+            return {
+                success: false,
+                content: '',
+                error: `AI vision request error: ${errorMessage}`,
                 provider: this.config.type,
                 model: this.config.model
             }

@@ -277,6 +277,20 @@ export class LifeTrackerPlugin extends Plugin {
                     }
                 }
             }
+
+            // Load meal/nutrition settings
+            if (typeof loadedSettings.mealsPropertyName === 'string') {
+                draft.mealsPropertyName = loadedSettings.mealsPropertyName
+            }
+            if (typeof loadedSettings.nutritionPropertyPrefix === 'string') {
+                draft.nutritionPropertyPrefix = loadedSettings.nutritionPropertyPrefix
+            }
+            if (typeof loadedSettings.autoCreateDailyNote === 'boolean') {
+                draft.autoCreateDailyNote = loadedSettings.autoCreateDailyNote
+            }
+            if (typeof loadedSettings.mealAnalysisPrompt === 'string') {
+                draft.mealAnalysisPrompt = loadedSettings.mealAnalysisPrompt
+            }
         })
 
         log(`Settings loaded`, 'debug', loadedSettings)

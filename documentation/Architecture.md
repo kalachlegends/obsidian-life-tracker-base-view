@@ -27,10 +27,13 @@ src/
       capture-command.ts           # Property capture command (carousel)
       daily-capture-command.ts     # Daily capture command (all fields)
       thought-capture-command.ts   # Thought capture command
+      meal-capture-command.ts      # Log meal command (active file)
       today-capture-command.ts     # Today's capture (auto-finds today's note)
       today-daily-capture-command.ts # Today's daily capture - all fields (auto-finds today's note)
       today-thought-command.ts     # Today's thought (auto-finds today's note)
-      today-utils.ts               # Shared utility to find today's daily note
+      today-meal-command.ts        # Today's meal (auto-finds/creates today's note)
+      scan-food-command.ts         # Scan food image with AI
+      today-utils.ts               # Shared utility to find/create today's daily note
       sync-ticktick-command.ts     # Standalone TickTick sync for active file
       sync-hcgateway-command.ts    # Standalone HCGateway sync for active file
       analyze-note-command.ts      # AI analysis of active file's frontmatter
@@ -38,6 +41,9 @@ src/
       date-anchor.service.ts       # Extract dates from entries (filename, properties)
       data-aggregation.service.ts  # Aggregate data for visualizations
       frontmatter.service.ts       # Read/write frontmatter properties
+      meal.service.ts              # Parse, serialize, aggregate meal/nutrition data
+      daily-note-creation.service.ts # Auto-create daily notes from template
+      daily-note-format.utils.ts   # Moment.js to date-fns format conversion
       chart-aggregation.utils.ts   # Chart-specific aggregation
       date-grouping.utils.ts       # Time period grouping
     view/
@@ -69,9 +75,11 @@ src/
         validation.utils.ts        # Validation functions
         dirty-state.service.ts     # Track unsaved changes
       modals/
-        property-capture-modal.ts  # Carousel-style capture modal (one field at a time)
+         property-capture-modal.ts  # Carousel-style capture modal (one field at a time)
         daily-note-modal.ts        # Form-style modal (all fields at once)
         thoughts-modal.ts          # Quick thought capture modal
+        meal-modal.ts              # Meal capture modal (manual + AI image analysis)
+        daily-note-suggest-modal.ts # FuzzySuggestModal for picking a daily note
       visualizations/
         base-visualization.ts      # Abstract base class
         heatmap/                   # GitHub-style heatmap
@@ -154,7 +162,9 @@ All editors:
 - **FrontmatterService**: Read/write frontmatter, validate against property definitions
 - **ColumnConfigService**: Manages per-property visualization configs (persisted in view config)
 - **MaximizeStateService**: Handles card maximize/minimize state, escape key handler
-- **AIService**: OpenAI/OpenRouter compatible chat completions client for data analysis
+- **AIService**: OpenAI/OpenRouter compatible chat completions client for data analysis (supports vision/multimodal)
+- **MealService**: Parse, serialize, and aggregate meal entries with nutritional data
+- **DailyNoteCreationService**: Auto-create daily notes using core Daily Notes plugin template settings
 
 ### Commands
 
@@ -164,6 +174,9 @@ All editors:
 - **Today's capture** (`today-capture`): Auto-finds today's daily note in the configured folder, opens property capture carousel
 - **Today's daily capture** (`today-daily-capture`): Auto-finds today's daily note, opens form-style modal with all fields at once
 - **Today's thought** (`today-thought`): Auto-finds today's daily note in the configured folder, opens thought capture modal
+- **Log meal** (`log-meal`): Opens meal capture modal on the active file (manual entry + AI image analysis)
+- **Today's meal** (`today-meal`): Auto-finds/creates today's daily note, opens meal capture modal
+- **Scan food image** (`scan-food`): Opens meal modal for AI-powered food image analysis
 - **Sync TickTick data** (`sync-ticktick`): Fetches TickTick data for the active file's date and writes to frontmatter
 - **Sync Health Connect data** (`sync-hcgateway`): Fetches HCGateway health data for the active file's date and writes to frontmatter
 - **Analyze note with AI** (`analyze-note`): Reads frontmatter from the active file and sends to AI for analysis
